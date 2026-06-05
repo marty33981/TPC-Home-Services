@@ -91,7 +91,7 @@ window.HW = {
       protected: true,                        // Administrator1 — immutable
       name: "Marty",
       email: "Marty@truexpreferredconstruction.com",
-      password: "2025Truex$Pref",
+      password: "Truex#123",
       initials: "MT",
       createdAt: "2026-06-01",
     },
