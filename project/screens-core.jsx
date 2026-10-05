@@ -27,6 +27,26 @@ function Dashboard({ nav }) {
         </p>
       </div>
 
+      {/* hurricane watch banner */}
+      {HW.hurricaneWatch && HW.hurricaneWatch.active && (
+        <div className="rise" style={{ margin:"14px 20px 0" }}>
+          <button onClick={() => nav.go("properties")} className="tap" style={{ width:"100%", textAlign:"left", border:"none",
+            background:"linear-gradient(135deg,#7A2800,#C45200)", color:"#fff", borderRadius:"var(--r)", padding:"13px 16px",
+            cursor:"pointer", display:"flex", alignItems:"center", gap:12, boxShadow:"0 6px 20px rgba(196,82,0,0.35)" }}>
+            <div style={{ width:40, height:40, borderRadius:11, background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Icon name="hurricane" size={22} color="#fff" />
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:800, fontSize:14.5 }}>{HW.hurricaneWatch.name} · Hurricane Watch</div>
+              <div style={{ fontSize:12.5, opacity:0.85, marginTop:2 }}>
+                {HW.stats.hurricane_watch} properties at risk · {HW.hurricaneWatch.wind} winds · ETA {HW.hurricaneWatch.eta}
+              </div>
+            </div>
+            <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.9)" />
+          </button>
+        </div>
+      )}
+
       {/* urgent banner */}
       {urgent && (
         <div className="rise" style={{ margin:"16px 20px 0" }}>
@@ -112,43 +132,219 @@ function AlertRow({ a, nav, delay = 0 }) {
   );
 }
 
-// ── PROPERTIES LIST ──────────────────────────────────────────
-function Properties({ nav }) {
-  const [filter, setFilter] = useState("All");
-  const filters = ["All", "Needs attention", "Seasonal", "Vacant"];
-  const list = HW.properties.filter(p => {
-    if (filter === "All") return true;
-    if (filter === "Needs attention") return p.status !== "active";
-    return p.type === filter;
-  });
+// ── HURRICANE MANAGE SHEET ───────────────────────────────────
+function HurricaneManageSheet({ hurricanePropIds, onToggle, onClose }) {
   return (
-    <div className="hw-scroll">
-      <AppHeader title="Properties" sub={`${HW.stats.active_properties} under watch`} />
-      {/* search */}
-      <div style={{ padding:"2px 20px 4px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:9, background:"var(--surface)", borderRadius:13, padding:"11px 14px", boxShadow:"var(--shadow-sm)" }}>
-          <Icon name="search" size={18} color="var(--ink-3)" />
-          <span style={{ color:"var(--ink-3)", fontSize:15 }}>Search properties or owners</span>
+    <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+      {/* backdrop */}
+      <div onClick={onClose} style={{ position:"absolute", inset:0, background:"rgba(15,28,63,0.45)", backdropFilter:"blur(3px)" }} />
+      {/* sheet */}
+      <div style={{ position:"relative", background:"var(--bg)", borderRadius:"var(--r-lg) var(--r-lg) 0 0",
+        padding:"0 0 34px", maxHeight:"72%", display:"flex", flexDirection:"column",
+        animation:"hw-slide-up .3s cubic-bezier(.22,.61,.36,1) both" }}>
+        {/* handle */}
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 4px" }}>
+          <div style={{ width:36, height:4, borderRadius:999, background:"var(--line)" }} />
         </div>
-      </div>
-      {/* filter chips */}
-      <div className="hscroll" style={{ padding:"12px 20px 4px" }}>
-        {filters.map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ flexShrink:0, border:"none", cursor:"pointer", whiteSpace:"nowrap",
-            padding:"8px 15px", borderRadius:999, fontSize:13.5, fontWeight:700, fontFamily:"var(--sans)",
-            background: filter===f ? "var(--pine)" : "var(--surface)", color: filter===f ? "var(--on-pine)" : "var(--ink-2)",
-            boxShadow: filter===f ? "none" : "var(--shadow-sm)", transition:"all .15s" }}>{f}</button>
-        ))}
-      </div>
-      {/* cards */}
-      <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:14 }}>
-        {list.map((p,i) => <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} />)}
+        {/* header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 20px 14px" }}>
+          <div>
+            <div style={{ fontWeight:800, fontSize:17, letterSpacing:-0.3 }}>Hurricane Watch</div>
+            <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2 }}>Tap to add or remove properties</div>
+          </div>
+          <button onClick={onClose} style={{ border:"none", background:"var(--bg-2)", borderRadius:999, width:32, height:32,
+            display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+            <Icon name="x" size={17} color="var(--ink-2)" />
+          </button>
+        </div>
+        <Hr />
+        {/* property list */}
+        <div style={{ overflowY:"auto", padding:"8px 20px 0" }}>
+          {HW.properties.map(p => {
+            const on = hurricanePropIds.has(p.id);
+            return (
+              <button key={p.id} onClick={() => onToggle(p.id)} className="tap"
+                style={{ display:"flex", alignItems:"center", gap:13, width:"100%", padding:"13px 0",
+                  border:"none", background:"transparent", cursor:"pointer", textAlign:"left",
+                  borderBottom:"1px solid var(--line)" }}>
+                {/* toggle */}
+                <div style={{ width:28, height:28, borderRadius:8, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+                  background: on ? "#C45200" : "var(--bg-2)", transition:"background .15s" }}>
+                  {on
+                    ? <Icon name="hurricane" size={16} color="#fff" />
+                    : <Icon name="plus" size={16} color="var(--ink-3)" />}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:14.5, letterSpacing:-0.2 }}>{p.name}</div>
+                  <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1 }}>{p.address.split(",")[0]}</div>
+                </div>
+                <StatusPill status={p.status} dot={false} />
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function PropertyCard({ p, nav, delay = 0 }) {
+// ── HURRICANE WATCH SECTION ───────────────────────────────────
+function HurricaneWatchSection({ nav, hurricanePropIds, onManage }) {
+  const hw = HW.hurricaneWatch;
+  if (!hw || !hw.active) return null;
+  const props = HW.properties.filter(p => hurricanePropIds.has(p.id));
+  return (
+    <div style={{ margin:"16px 20px 0" }} className="rise">
+      {/* storm banner */}
+      <div style={{ background:"linear-gradient(135deg,#7A2800,#C45200)", borderRadius:"var(--r) var(--r) 0 0",
+        padding:"14px 16px 12px", color:"#fff", display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ width:44, height:44, borderRadius:12, background:"rgba(255,255,255,0.15)",
+          display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <Icon name="hurricane" size={26} color="#fff" />
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:10.5, fontWeight:800, letterSpacing:0.12, textTransform:"uppercase", opacity:0.8 }}>
+            Hurricane Watch Active · {hw.counties.join(", ")} Counties
+          </div>
+          <div style={{ fontSize:17, fontWeight:800, letterSpacing:-0.3, marginTop:2 }}>{hw.name}</div>
+          <div style={{ fontSize:12.5, opacity:0.85, marginTop:2, display:"flex", gap:14 }}>
+            <span>💨 {hw.wind}</span>
+            <span>⏱ ETA {hw.eta}</span>
+          </div>
+        </div>
+        <div style={{ fontSize:10, fontWeight:700, opacity:0.7, textAlign:"right", flexShrink:0, lineHeight:1.4 }}>
+          Updated<br/>{hw.updated}
+        </div>
+      </div>
+      {/* affected properties */}
+      <div style={{ background:"#FFF0E0", borderRadius:"0 0 var(--r) var(--r)", padding:"10px 14px 12px", borderTop:"1px solid rgba(196,82,0,0.2)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+          <div style={{ fontSize:11.5, fontWeight:800, color:"#C45200", letterSpacing:0.06, textTransform:"uppercase" }}>
+            {props.length} {props.length === 1 ? "property" : "properties"} under watch
+          </div>
+          <button onClick={onManage} style={{ display:"flex", alignItems:"center", gap:5, border:"none", cursor:"pointer",
+            background:"rgba(196,82,0,0.12)", borderRadius:999, padding:"5px 10px 5px 8px" }}>
+            <Icon name="adjustments-horizontal" size={13} color="#C45200" />
+            <span style={{ fontSize:12, fontWeight:800, color:"#C45200" }}>Manage</span>
+          </button>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {props.length === 0 && (
+            <button onClick={onManage} className="tap" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              padding:"12px", borderRadius:12, background:"rgba(196,82,0,0.08)", border:"1.5px dashed rgba(196,82,0,0.3)",
+              cursor:"pointer", width:"100%" }}>
+              <Icon name="plus" size={16} color="#C45200" />
+              <span style={{ fontSize:13.5, fontWeight:700, color:"#C45200" }}>Add properties to watch</span>
+            </button>
+          )}
+          {props.map(p => (
+            <button key={p.id} onClick={() => nav.push("property", { id:p.id })} className="tap"
+              style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 12px", borderRadius:12,
+                background:"#fff", border:"1.5px solid rgba(196,82,0,0.2)", boxShadow:"0 1px 4px rgba(196,82,0,0.08)",
+                cursor:"pointer", textAlign:"left", width:"100%" }}>
+              <Icon name="hurricane" size={20} color="#C45200" style={{ flexShrink:0 }} />
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)", letterSpacing:-0.2 }}>{p.name}</div>
+                <div style={{ fontSize:12, color:"#C45200", fontWeight:600, marginTop:1 }}>{p.address.split(",")[1]?.trim()}</div>
+              </div>
+              <StatusPill status={p.status} dot={false} />
+              <Icon name="chevron-right" size={17} color="rgba(196,82,0,0.5)" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PROPERTIES LIST ──────────────────────────────────────────
+function Properties({ nav }) {
+  const [filter, setFilter] = useState("All");
+  const [showManage, setShowManage] = useState(false);
+  const [hurricanePropIds, setHurricanePropIds] = useState(
+    () => new Set(HW.properties.filter(p => p.hurricane).map(p => p.id))
+  );
+  const toggleHurricane = (id) => setHurricanePropIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const filters = ["All", "Hurricane Watch", "Needs attention", "Seasonal", "Vacant"];
+  const hurricaneActive = HW.hurricaneWatch && HW.hurricaneWatch.active;
+  const list = HW.properties.filter(p => {
+    if (filter === "Hurricane Watch") return hurricanePropIds.has(p.id);
+    if (filter === "All") return true;
+    if (filter === "Needs attention") return p.status !== "active";
+    return p.type === filter;
+  });
+  return (
+    <div style={{ position:"relative", height:"100%", display:"flex", flexDirection:"column" }}>
+      <div className="hw-scroll">
+        <AppHeader title="Properties" sub={`${HW.stats.active_properties} under watch`} />
+        {/* search */}
+        <div style={{ padding:"2px 20px 4px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:9, background:"var(--surface)", borderRadius:13, padding:"11px 14px", boxShadow:"var(--shadow-sm)" }}>
+            <Icon name="search" size={18} color="var(--ink-3)" />
+            <span style={{ color:"var(--ink-3)", fontSize:15 }}>Search properties or owners</span>
+          </div>
+        </div>
+        {/* filter chips */}
+        <div className="hscroll" style={{ padding:"12px 20px 4px" }}>
+          {filters.map(f => {
+            const isHurricane = f === "Hurricane Watch";
+            const active = filter === f;
+            const count = isHurricane ? hurricanePropIds.size : 0;
+            return (
+              <button key={f} onClick={() => setFilter(f)} style={{ flexShrink:0, border:"none", cursor:"pointer", whiteSpace:"nowrap",
+                padding:"8px 15px", borderRadius:999, fontSize:13.5, fontWeight:700, fontFamily:"var(--sans)",
+                background: active ? (isHurricane ? "#C45200" : "var(--pine)") : (isHurricane ? "#FFF0E0" : "var(--surface)"),
+                color: active ? "#fff" : (isHurricane ? "#C45200" : "var(--ink-2)"),
+                boxShadow: active ? "none" : "var(--shadow-sm)", transition:"all .15s",
+                display:"flex", alignItems:"center", gap:5 }}>
+                {isHurricane && <Icon name="hurricane" size={14} color={active ? "#fff" : "#C45200"} />}
+                {f}
+                {isHurricane && count > 0 && (
+                  <span style={{ background: active ? "rgba(255,255,255,0.25)" : "rgba(196,82,0,0.15)",
+                    borderRadius:999, padding:"1px 6px", fontSize:12 }}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {/* hurricane watch section — shown on All view */}
+        {filter === "All" && hurricaneActive && (
+          <HurricaneWatchSection nav={nav} hurricanePropIds={hurricanePropIds} onManage={() => setShowManage(true)} />
+        )}
+        {/* manage button on Hurricane Watch filter view */}
+        {filter === "Hurricane Watch" && (
+          <div style={{ padding:"10px 20px 0", display:"flex", justifyContent:"flex-end" }}>
+            <button onClick={() => setShowManage(true)} style={{ display:"flex", alignItems:"center", gap:6, border:"none", cursor:"pointer",
+              background:"#FFF0E0", borderRadius:999, padding:"7px 14px 7px 10px" }}>
+              <Icon name="adjustments-horizontal" size={15} color="#C45200" />
+              <span style={{ fontSize:13, fontWeight:800, color:"#C45200" }}>Manage</span>
+            </button>
+          </div>
+        )}
+        {/* cards */}
+        <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:14 }}>
+          {list.map((p,i) => (
+            <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} isHurricane={hurricanePropIds.has(p.id)} />
+          ))}
+        </div>
+      </div>
+      {showManage && (
+        <HurricaneManageSheet
+          hurricanePropIds={hurricanePropIds}
+          onToggle={toggleHurricane}
+          onClose={() => setShowManage(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PropertyCard({ p, nav, delay = 0, isHurricane = false }) {
   return (
     <button onClick={() => nav.push("property", { id:p.id })} className="tap rise"
       style={{ border:"none", padding:0, cursor:"pointer", textAlign:"left", borderRadius:"var(--r)", overflow:"hidden",
@@ -156,12 +352,19 @@ function PropertyCard({ p, nav, delay = 0 }) {
       {/* gradient header */}
       <div style={{ background:p.grad, padding:"15px 16px 14px", color:"#fff", position:"relative", overflow:"hidden" }}>
         <Icon name="home" size={120} style={{ position:"absolute", right:-22, top:-16, opacity:0.1 }} color="#fff" />
+        {isHurricane && (
+          <div style={{ position:"absolute", top:10, right:10, display:"flex", alignItems:"center", gap:5,
+            background:"rgba(196,82,0,0.92)", borderRadius:999, padding:"4px 9px 4px 7px", backdropFilter:"blur(4px)" }}>
+            <Icon name="hurricane" size={13} color="#fff" />
+            <span style={{ fontSize:11, fontWeight:800, color:"#fff", letterSpacing:0.04 }}>Hurricane Watch</span>
+          </div>
+        )}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, position:"relative" }}>
           <div>
             <div style={{ fontSize:11.5, fontWeight:700, letterSpacing:0.08, textTransform:"uppercase", opacity:0.85 }}>{p.type}</div>
             <div style={{ fontSize:19, fontWeight:800, letterSpacing:-0.3, marginTop:3 }}>{p.name}</div>
           </div>
-          <StatusPill status={p.status} dot={false} />
+          {!isHurricane && <StatusPill status={p.status} dot={false} />}
         </div>
       </div>
       {/* body */}

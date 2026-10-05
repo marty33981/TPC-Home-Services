@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// TPC Home Services — Auth + User Management
+// TPC HomeWatch — Auth + User Management
 // Roles: administrator | operator | homeowner
 // Administrator1 (protected:true) cannot be edited by anyone.
 // Only administrators can manage users and checklists.
@@ -75,7 +75,7 @@ function LoginScreen({ onLogin }) {
       justifyContent:"center", padding:"40px 24px", background:"var(--bg)" }}>
       <div style={{ marginBottom:28, textAlign:"center" }}>
         <Logo size={54} />
-        <div style={{ marginTop:14, fontSize:22, fontWeight:800, letterSpacing:-0.4 }}>TPC Home Services</div>
+        <div style={{ marginTop:14, fontSize:22, fontWeight:800, letterSpacing:-0.4 }}>TPC HomeWatch</div>
         <div style={{ fontSize:14, color:"var(--ink-3)", fontWeight:600, marginTop:4 }}>Sign in to your account</div>
       </div>
 
@@ -125,7 +125,7 @@ function LoginScreen({ onLogin }) {
       </div>
 
       <div style={{ marginTop:32, fontSize:12, color:"var(--ink-3)", fontWeight:500, textAlign:"center" }}>
-        TPC Home Services · v{HW.version.number}
+        TPC HomeWatch · v{HW.version.number}
       </div>
     </div>
   );

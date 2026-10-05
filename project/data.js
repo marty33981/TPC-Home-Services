@@ -1,24 +1,35 @@
 // ─────────────────────────────────────────────────────────────
-// TPC Home Services — seed data (ported from app.py)
+// TPC HomeWatch — seed data (ported from app.py)
 // ─────────────────────────────────────────────────────────────
 window.HW = {
   version: { number: "1.2.0", build: "20260601", date: "June 1, 2026" },
-  brand: { name: "TPC Home Services", short: "TPC", operator: "Maria Reyes", initials: "MR",
+  brand: { name: "TPC HomeWatch", short: "TPC", operator: "Maria Reyes", initials: "MR",
            region: "Naples · Bonita Springs · Sarasota" },
 
   stats: {
     active_properties: 12, alerts_open: 3, visits_this_week: 5, reports_sent: 14,
+    hurricane_watch: 2,
+  },
+
+  hurricaneWatch: {
+    active: true,
+    name: "Tropical Storm Helene",
+    category: "Tropical Storm",
+    wind: "55 mph",
+    eta: "36–48 hrs",
+    updated: "May 15 · 6:00 AM NHC",
+    counties: ["Collier", "Lee", "Charlotte"],
   },
 
   properties: [
     { id:1, name:"Gulf Breeze Villa", address:"4821 Bayside Dr, Naples FL 34102",
-      type:"Seasonal", status:"alert", freq:"Weekly", last:"May 12",
+      type:"Seasonal", status:"alert", freq:"Weekly", last:"May 12", hurricane:true,
       grad:"linear-gradient(135deg,#1B4332,#52B788)",
       owner:{ name:"James Anderson", phone:"(312) 555-0182", email:"janderson@email.com", base:"Chicago, IL" },
       access:{ lockbox:"7742", alarm:"4411#", notes:"Pool equipment in back shed (key on ring). Alert neighbor Bob Marsh (239) 555-0199 if extended work." },
       alert:"Water intrusion under kitchen sink — detected during routine inspection May 15. Possible slow pipe leak. Shut-off valve turned off as a precaution." },
     { id:2, name:"Pelican Bay Estate", address:"702 Pelican Way, Naples FL 34108",
-      type:"Vacant", status:"due", freq:"Weekly", last:"May 8",
+      type:"Vacant", status:"due", freq:"Weekly", last:"May 8", hurricane:true,
       grad:"linear-gradient(135deg,#1D6FA4,#56A8DA)",
       owner:{ name:"Robert Thornton", phone:"(773) 555-0291", email:"rthorn@email.com", base:"Detroit, MI" },
       access:{ lockbox:"3391", alarm:"8822#", notes:"Side entrance key in lockbox. Notify property manager if pool pump is off." } },

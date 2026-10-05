@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// TPC Home Services — inspection, alerts, vendors, more
+// TPC HomeWatch — inspection, alerts, vendors, more
 // ─────────────────────────────────────────────────────────────
 
 // ── LIVE INSPECTION ──────────────────────────────────────────
@@ -416,7 +416,7 @@ function More({ nav, user, onLogout }) {
         <Icon name="logout" size={18} color="var(--danger)" /> Sign out
       </button>
       <div style={{ textAlign:"center", padding:"18px 18px 8px", fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>
-        TPC Home Services · v{HW.version.number}
+        TPC HomeWatch · v{HW.version.number}
         <div style={{ fontSize:11, fontWeight:500, marginTop:2, color:"var(--ink-3)" }}>Build {HW.version.build} · {HW.version.date}</div>
       </div>
     </div>

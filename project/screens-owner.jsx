@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// TPC Home Services — HOMEOWNER app (client-facing, peace-of-mind)
+// TPC HomeWatch — HOMEOWNER app (client-facing, peace-of-mind)
 // One remote owner (James Anderson) watching Gulf Breeze Villa.
 // ─────────────────────────────────────────────────────────────
 
@@ -404,7 +404,7 @@ function OwnerAccount({ nav }) {
       <div style={{ padding:"16px 20px" }}>
         <button className="btn btn-light btn-block" style={{ padding:"14px" }}><Icon name="help-circle" size={18} color="var(--pine-2)" /> Help & support</button>
       </div>
-      <div style={{ textAlign:"center", padding:"0 0 16px", fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>{HW.version ? `TPC Home Services · v${HW.version.number}` : "TPC Home Services"}</div>
+      <div style={{ textAlign:"center", padding:"0 0 16px", fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>{HW.version ? `TPC HomeWatch · v${HW.version.number}` : "TPC HomeWatch"}</div>
     </div>
   );
 }

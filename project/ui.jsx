@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// TPC Home Services — shared UI primitives
+// TPC HomeWatch — shared UI primitives
 // ─────────────────────────────────────────────────────────────
 const { useState, useEffect, useRef } = React;
 
@@ -17,8 +17,9 @@ const STATUS = {
   ready:     { cls:"pill-info",   label:"Ready" },
   scheduled: { cls:"pill-muted",  label:"Scheduled" },
   pending:   { cls:"pill-warn",   label:"Pending" },
-  available: { cls:"pill-ok",     label:"Available" },
-  busy:      { cls:"pill-muted",  label:"Busy" },
+  available: { cls:"pill-ok",      label:"Available" },
+  busy:      { cls:"pill-muted",   label:"Busy" },
+  hurricane: { cls:"pill-hurricane", label:"Hurricane Watch" },
 };
 function StatusPill({ status, label, dot = true }) {
   const s = STATUS[status] || STATUS.scheduled;
@@ -36,7 +37,7 @@ function AppHeader({ title, sub, avatar = true, large = true, right }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:40 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9 }}>
           <Logo size={26} />
-          <span style={{ fontWeight:800, fontSize:16, letterSpacing:-0.2 }}>{HW.brand.short}<span style={{ color:"var(--ink-3)", fontWeight:600 }}> Home Services</span></span>
+          <span style={{ fontWeight:800, fontSize:16, letterSpacing:-0.2 }}>{HW.brand.short}<span style={{ color:"var(--ink-3)", fontWeight:600 }}> HomeWatch</span></span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           {right}

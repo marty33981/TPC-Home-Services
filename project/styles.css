@@ -99,7 +99,8 @@ body {
 .pill-warn   { background: var(--warn-bg);   color: var(--warn); }
 .pill-info   { background: var(--info-bg);   color: var(--info); }
 .pill-ok     { background: var(--ok-bg);     color: var(--ok); }
-.pill-muted  { background: var(--bg-2);      color: var(--ink-2); }
+.pill-muted      { background: var(--bg-2);      color: var(--ink-2); }
+.pill-hurricane  { background: #FFF0E0;          color: #C45200; }
 
 /* buttons ─────────────────────────────────────────── */
 .btn {
