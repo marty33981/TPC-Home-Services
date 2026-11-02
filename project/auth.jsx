@@ -20,6 +20,8 @@ window.AUTH = {
   },
   logout() { this.currentUser = null; },
   isAdmin() { return this.currentUser?.role === "administrator"; },
+  isSupervisor() { return this.currentUser?.role === "supervisor"; },
+  canViewInbox() { return this.isAdmin() || this.isSupervisor(); },
   isProtected(id) { return this.users.find(u => u.id === id)?.protected === true; },
 
   addUser(data) {
@@ -29,14 +31,14 @@ window.AUTH = {
     return u;
   },
   updateUser(id, data) {
-    if (this.isProtected(id)) return { ok:false, error:"Administrator1 cannot be modified." };
+    if (this.isProtected(id)) return { ok:false, error:"This account cannot be modified." };
     const i = this.users.findIndex(u => u.id === id);
     if (i < 0) return { ok:false, error:"User not found." };
     this.users[i] = { ...this.users[i], ...data };
     return { ok:true };
   },
   deleteUser(id) {
-    if (this.isProtected(id)) return { ok:false, error:"Administrator1 cannot be deleted." };
+    if (this.isProtected(id)) return { ok:false, error:"This account cannot be deleted." };
     const i = this.users.findIndex(u => u.id === id);
     if (i < 0) return { ok:false, error:"User not found." };
     this.users.splice(i, 1);
@@ -440,33 +442,63 @@ function AdminChecklist({ nav }) {
   );
 }
 
-// ── Admin: Message Inbox (homeowner messages) ────────────────
+// ── Admin/Supervisor Inbox ────────────────────────────────────
 function AdminInbox({ nav }) {
   const msgs = AUTH.getAdminMessages();
+  const inspections = msgs.filter(m => m.type === "inspection");
+  const homeowner   = msgs.filter(m => m.type !== "inspection");
+  const isSupervisor = AUTH.isSupervisor();
+
   return (
     <div className="hw-app" style={{ background:"var(--bg)" }}>
       <div className="hw-scroll">
-        <DrillHeader onBack={nav.back} title="Homeowner Messages" sub="Administrators only" />
+        <DrillHeader onBack={nav.back} title="Notifications" sub={isSupervisor ? "Supervisor" : "Administrator"} />
         <div style={{ padding:"8px 20px 80px", display:"flex", flexDirection:"column", gap:10 }}>
           {msgs.length === 0 && (
             <div style={{ textAlign:"center", padding:"60px 20px", color:"var(--ink-3)" }}>
               <Icon name="inbox" size={40} color="var(--ink-3)" />
-              <div style={{ marginTop:12, fontSize:15, fontWeight:600 }}>No messages yet</div>
-              <div style={{ fontSize:13, marginTop:4 }}>Homeowner messages will appear here</div>
+              <div style={{ marginTop:12, fontSize:15, fontWeight:600 }}>No notifications yet</div>
+              <div style={{ fontSize:13, marginTop:4 }}>Inspection reports will appear here</div>
             </div>
           )}
-          {msgs.map(m => (
-            <div key={m.id} className="card" style={{ padding:"14px 16px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                <span style={{ fontWeight:700, fontSize:14.5 }}>{m.from}</span>
-                <span style={{ fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>{m.sentAt}</span>
-              </div>
-              <div style={{ fontSize:13.5, color:"var(--ink-2)", lineHeight:1.5 }}>{m.text}</div>
-              {m.property && <div style={{ marginTop:8, fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>
-                <Icon name="home" size={13} /> {m.property}
-              </div>}
-            </div>
-          ))}
+          {inspections.length > 0 && (
+            <>
+              <div className="eyebrow" style={{ paddingLeft:2, marginTop:6 }}>Inspection Reports</div>
+              {inspections.map(m => (
+                <div key={m.id} className="card" style={{ padding:"14px 16px", borderLeft:"4px solid var(--ok)" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <Icon name="circle-check-filled" size={18} color="var(--ok)" />
+                      <span style={{ fontWeight:800, fontSize:14.5 }}>Inspection Complete</span>
+                    </div>
+                    <span style={{ fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>{m.sentAt}</span>
+                  </div>
+                  <div style={{ fontSize:13.5, color:"var(--ink-2)", lineHeight:1.5 }}>{m.text}</div>
+                  {m.property && <div style={{ marginTop:8, fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>
+                    <Icon name="home" size={13} /> {m.property}
+                    <span style={{ marginLeft:8, color:"var(--ink-3)" }}>· by {m.from}</span>
+                  </div>}
+                </div>
+              ))}
+            </>
+          )}
+          {!isSupervisor && homeowner.length > 0 && (
+            <>
+              <div className="eyebrow" style={{ paddingLeft:2, marginTop:6 }}>Homeowner Messages</div>
+              {homeowner.map(m => (
+                <div key={m.id} className="card" style={{ padding:"14px 16px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                    <span style={{ fontWeight:700, fontSize:14.5 }}>{m.from}</span>
+                    <span style={{ fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>{m.sentAt}</span>
+                  </div>
+                  <div style={{ fontSize:13.5, color:"var(--ink-2)", lineHeight:1.5 }}>{m.text}</div>
+                  {m.property && <div style={{ marginTop:8, fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>
+                    <Icon name="home" size={13} /> {m.property}
+                  </div>}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>

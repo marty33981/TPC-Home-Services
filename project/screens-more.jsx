@@ -131,6 +131,23 @@ function Ring({ pct }) {
 }
 
 function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
+  const [sent, setSent] = useState(false);
+
+  const sendReport = () => {
+    const flagText = flagged > 0 ? ` ${flagged} issue${flagged>1?"s":""} flagged.` : " No issues flagged.";
+    AUTH.sendToAdmins({
+      from: (AUTH.currentUser || {}).name || "Operator",
+      type: "inspection",
+      text: `Inspection completed: ${item.name} at ${prop.name}. ${count}/${total} checks done.${flagText}${notes ? " Notes: " + notes : ""}`,
+      property: prop.name,
+    });
+    setSent(true);
+    setTimeout(nav.back, 1800);
+  };
+
+  // Notify only users marked for inspection alerts (Supervisor1 = Gina)
+  const notifyNames = AUTH.users.filter(u => u.notifyOnInspection).map(u => u.name).join(" & ") || "Administrator";
+
   return (
     <div style={{ position:"absolute", inset:0, zIndex:30, display:"flex", flexDirection:"column", justifyContent:"flex-end",
       background:"rgba(20,28,23,0.5)", backdropFilter:"blur(3px)", animation:"hw-fade-in .25s ease both" }} onClick={nav.back}>
@@ -146,9 +163,17 @@ function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
           <SummaryStat v={flagged} l="Issues flagged" tone={flagged?"var(--danger)":"var(--ink)"} />
           <SummaryStat v={HW.photos.length} l="Photos" />
         </div>
-        <button className="btn btn-primary btn-block" onClick={nav.back} style={{ padding:"16px", fontSize:16 }}>
-          <Icon name="send" size={18} color="#fff" /> Send report to administrator
-        </button>
+        {sent ? (
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"16px",
+            background:"var(--ok-bg)", borderRadius:14, marginBottom:2 }}>
+            <Icon name="circle-check-filled" size={22} color="var(--ok)" />
+            <span style={{ fontWeight:800, fontSize:15.5, color:"var(--ok)" }}>{notifyNames} notified</span>
+          </div>
+        ) : (
+          <button className="btn btn-primary btn-block" onClick={sendReport} style={{ padding:"16px", fontSize:16 }}>
+            <Icon name="send" size={18} color="#fff" /> Notify {notifyNames}
+          </button>
+        )}
         {notes ? <div style={{ margin:"12px 0 0", background:"var(--surface-2)", borderRadius:"var(--r-sm)", padding:"10px 13px", fontSize:13, color:"var(--ink-2)", lineHeight:1.5 }}><span style={{ fontWeight:700, color:"var(--ink)" }}>Notes: </span>{notes}</div> : null}
         <button className="btn btn-ghost btn-block" onClick={nav.back} style={{ padding:"12px", marginTop:6, fontSize:15 }}>Back to dashboard</button>
       </div>
@@ -333,8 +358,11 @@ function Vendors({ nav }) {
 
 // ── MORE ─────────────────────────────────────────────────────
 function More({ nav, user, onLogout }) {
-  const isAdmin = AUTH.isAdmin();
-  const msgCount = AUTH.getAdminMessages().length;
+  const isAdmin      = AUTH.isAdmin();
+  const isSupervisor = AUTH.isSupervisor();
+  const canInbox     = AUTH.canViewInbox();
+  const msgCount     = AUTH.getAdminMessages().length;
+  const inspCount    = AUTH.getAdminMessages().filter(m => m.type === "inspection").length;
 
   const links = [
     { icon:"tools",       label:"Vendors",       sub:"4 partners",           go:()=>nav.go("vendors") },
@@ -344,9 +372,15 @@ function More({ nav, user, onLogout }) {
   ];
 
   const adminLinks = [
-    { icon:"users",        label:"User Management",   sub:"Add or edit users",         go:()=>nav.push("adminUsers") },
-    { icon:"clipboard-list",label:"Edit Checklist",   sub:"Inspection items",           go:()=>nav.push("adminChecklist") },
-    { icon:"message-2",   label:"Homeowner Messages", sub: msgCount > 0 ? `${msgCount} message${msgCount>1?"s":""}` : "No new messages", go:()=>nav.push("adminInbox") },
+    { icon:"users",         label:"User Management",    sub:"Add or edit users",      go:()=>nav.push("adminUsers") },
+    { icon:"clipboard-list",label:"Edit Checklist",     sub:"Inspection items",       go:()=>nav.push("adminChecklist") },
+    { icon:"message-2",     label:"Homeowner Messages", sub: msgCount > 0 ? `${msgCount} message${msgCount>1?"s":""}` : "No new messages", go:()=>nav.push("adminInbox") },
+  ];
+
+  const supervisorLinks = [
+    { icon:"clipboard-check", label:"Inspection Reports",
+      sub: inspCount > 0 ? `${inspCount} report${inspCount>1?"s":""}` : "No reports yet",
+      go:()=>nav.push("adminInbox") },
   ];
 
   const u = user || AUTH.currentUser;
@@ -404,6 +438,31 @@ function More({ nav, user, onLogout }) {
                   <div style={{ fontWeight:700, fontSize:15 }}>{l.label}</div>
                   {l.sub && <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1 }}>{l.sub}</div>}
                 </div>
+                <Icon name="chevron-right" size={18} color="var(--ink-3)" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {isSupervisor && (
+        <>
+          <div className="eyebrow" style={{ margin:"22px 20px 8px" }}>
+            <Icon name="eye" size={13} color="var(--ok)" style={{ verticalAlign:-1, marginRight:5 }} />
+            Supervisor
+          </div>
+          <div className="card rise" style={{ margin:"0 20px", overflow:"hidden", animationDelay:"0.08s" }}>
+            {supervisorLinks.map((l,i) => (
+              <button key={l.label} onClick={l.go} className="tap" style={{ width:"100%", border:"none", background:"transparent", cursor:"pointer",
+                display:"flex", alignItems:"center", gap:13, padding:"14px 16px",
+                borderBottom: i===supervisorLinks.length-1?"none":"1px solid var(--line)", textAlign:"left" }}>
+                <IconTile icon={l.icon} bg="var(--ok-bg)" color="var(--ok)" size={36} r={10} iconSize={19} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:15 }}>{l.label}</div>
+                  {l.sub && <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1 }}>{l.sub}</div>}
+                </div>
+                {inspCount > 0 && <span style={{ background:"var(--ok)", color:"#fff", fontSize:12, fontWeight:800, minWidth:20, height:20,
+                  borderRadius:999, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 5px" }}>{inspCount}</span>}
                 <Icon name="chevron-right" size={18} color="var(--ink-3)" />
               </button>
             ))}

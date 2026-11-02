@@ -106,6 +106,17 @@ window.HW = {
       initials: "MT",
       createdAt: "2026-06-01",
     },
+    {
+      id: "supervisor-1",
+      role: "supervisor",
+      protected: true,                        // Supervisor1 — immutable
+      name: "Gina",
+      email: "gina@truexpreferredconstruction.com",
+      password: "TPC#Gina1",
+      initials: "GN",
+      createdAt: "2026-11-02",
+      notifyOnInspection: true,               // always receive inspection completion alerts
+    },
   ],
 
   // Inbox: messages from homeowners always route to administrators
