@@ -1,29 +1,32 @@
 // TPC Home Services — Service Worker
 // Cache-first for app shell; network-first for dynamic data.
 
-const CACHE = 'tpc-homewatch-v1';
+const CACHE = 'tpc-homewatch-v2';
+
+// Derive base path from SW location so this works on any subdirectory (e.g. GitHub Pages)
+const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
 
 const SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/project/styles.css',
-  '/project/data.js',
-  '/project/ios-frame.jsx',
-  '/project/tweaks-panel.jsx',
-  '/project/ui.jsx',
-  '/project/screens-core.jsx',
-  '/project/screens-detail.jsx',
-  '/project/screens-more.jsx',
-  '/project/screens-owner.jsx',
-  '/project/app.jsx',
-  '/vendor/react.js',
-  '/vendor/react-dom.js',
-  '/vendor/babel.min.js',
-  '/vendor/tabler-icons/tabler-icons.min.css',
-  '/vendor/tabler-icons/fonts/tabler-icons.woff2',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/manifest.json',
+  BASE + '/project/styles.css',
+  BASE + '/project/data.js',
+  BASE + '/project/ios-frame.jsx',
+  BASE + '/project/tweaks-panel.jsx',
+  BASE + '/project/ui.jsx',
+  BASE + '/project/screens-core.jsx',
+  BASE + '/project/screens-detail.jsx',
+  BASE + '/project/screens-more.jsx',
+  BASE + '/project/screens-owner.jsx',
+  BASE + '/project/app.jsx',
+  BASE + '/vendor/react.js',
+  BASE + '/vendor/react-dom.js',
+  BASE + '/vendor/babel.min.js',
+  BASE + '/vendor/tabler-icons/tabler-icons.min.css',
+  BASE + '/vendor/tabler-icons/fonts/tabler-icons.woff2',
+  BASE + '/icons/icon-192.png',
+  BASE + '/icons/icon-512.png',
 ];
 
 // Install: pre-cache the app shell
