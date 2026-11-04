@@ -30,7 +30,7 @@ const FULL_SCREENS  = new Set(["inspection"]);
 // Screens that hide the tab bar but keep the device frame
 const NOTAB_SCREENS = new Set(["property","adminUsers","adminChecklist","adminInbox"]);
 
-function App({ user }) {
+function App({ user, onLogout }) {
   const [stack, setStack] = useState([{ name:"dashboard", props:{} }]);
   const depthRef = useRef(1);
 
