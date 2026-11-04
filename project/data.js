@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────
-// TPC HomeWatch — seed data (ported from app.py)
+// TPC Home Services — seed data (ported from app.py)
 // ─────────────────────────────────────────────────────────────
 window.HW = {
   version: { number: "2.4.3", build: "20261104", date: "November 4, 2026" },
-  brand: { name: "TPC HomeWatch", short: "TPC", operator: "Maria Reyes", initials: "MR",
+  brand: { name: "TPC Home Services", short: "TPC", operator: "Maria Reyes", initials: "MR",
            region: "Naples · Bonita Springs · Sarasota" },
 
   stats: {
@@ -102,20 +102,20 @@ window.HW = {
       protected: true,                        // Administrator1 — immutable
       name: "Marty",
       email: "Marty@truexpreferredconstruction.com",
-      password: "Truex#123",
+      password: "Tester@33981",
       initials: "MT",
       createdAt: "2026-06-01",
     },
     {
       id: "supervisor-1",
       role: "supervisor",
-      protected: true,                        // Supervisor1 — immutable
+      protected: true,
       name: "Gina",
       email: "gina@truexpreferredconstruction.com",
       password: "TPC#Gina1",
       initials: "GN",
       createdAt: "2026-11-02",
-      notifyOnInspection: true,               // always receive inspection completion alerts
+      notifyOnInspection: true,
     },
   ],
 

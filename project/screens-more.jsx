@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// TPC HomeWatch — inspection, alerts, vendors, more
+// TPC Home Services — inspection, alerts, vendors, more
 // ─────────────────────────────────────────────────────────────
 
 // ── LIVE INSPECTION ──────────────────────────────────────────
@@ -145,7 +145,6 @@ function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
     setTimeout(nav.back, 1800);
   };
 
-  // Notify only users marked for inspection alerts (Supervisor1 = Gina)
   const notifyNames = AUTH.users.filter(u => u.notifyOnInspection).map(u => u.name).join(" & ") || "Administrator";
 
   return (
@@ -167,7 +166,7 @@ function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"16px",
             background:"var(--ok-bg)", borderRadius:14, marginBottom:2 }}>
             <Icon name="circle-check-filled" size={22} color="var(--ok)" />
-            <span style={{ fontWeight:800, fontSize:15.5, color:"var(--ok)" }}>{notifyNames} notified</span>
+            <span style={{ fontWeight:800, fontSize:15.5, color:"var(--ok)" }}>{notifyNames} notified ✓</span>
           </div>
         ) : (
           <button className="btn btn-primary btn-block" onClick={sendReport} style={{ padding:"16px", fontSize:16 }}>
@@ -360,7 +359,6 @@ function Vendors({ nav }) {
 function More({ nav, user, onLogout }) {
   const isAdmin      = AUTH.isAdmin();
   const isSupervisor = AUTH.isSupervisor();
-  const canInbox     = AUTH.canViewInbox();
   const msgCount     = AUTH.getAdminMessages().length;
   const inspCount    = AUTH.getAdminMessages().filter(m => m.type === "inspection").length;
 
@@ -475,7 +473,7 @@ function More({ nav, user, onLogout }) {
         <Icon name="logout" size={18} color="var(--danger)" /> Sign out
       </button>
       <div style={{ textAlign:"center", padding:"18px 18px 8px", fontSize:12, color:"var(--ink-3)", fontWeight:600 }}>
-        TPC HomeWatch · v{HW.version.number}
+        TPC Home Services · v{HW.version.number}
         <div style={{ fontSize:11, fontWeight:500, marginTop:2, color:"var(--ink-3)" }}>Build {HW.version.build} · {HW.version.date}</div>
       </div>
     </div>
