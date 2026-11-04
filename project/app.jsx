@@ -3,19 +3,27 @@
 // ─────────────────────────────────────────────────────────────
 
 const SCREENS = {
-  dashboard:      (p) => <Dashboard {...p} />,
-  properties:     (p) => <Properties {...p} />,
-  schedule:       (p) => <Schedule {...p} />,
-  alerts:         (p) => <Alerts {...p} />,
-  vendors:        (p) => <Vendors {...p} />,
-  more:           (p) => <More {...p} />,
-  property:       (p) => <PropertyDetail {...p} />,
-  inspection:     (p) => <Inspection {...p} />,
-  adminUsers:     (p) => <AdminUsers {...p} />,
-  adminChecklist: (p) => <AdminChecklist {...p} />,
-  adminInbox:     (p) => <AdminInbox {...p} />,
-  operatorReports:(p) => <OperatorReports {...p} />,
-  sendAlert:      (p) => <SendAlert {...p} />,
+  dashboard:           (p) => <Dashboard {...p} />,
+  properties:          (p) => <Properties {...p} />,
+  schedule:            (p) => <Schedule {...p} />,
+  alerts:              (p) => <Alerts {...p} />,
+  vendors:             (p) => <Vendors {...p} />,
+  more:                (p) => <More {...p} />,
+  property:            (p) => <PropertyDetail {...p} />,
+  inspection:          (p) => <Inspection {...p} />,
+  adminUsers:          (p) => <AdminUsers {...p} />,
+  adminChecklist:      (p) => <AdminChecklist {...p} />,
+  adminInbox:          (p) => <AdminInbox {...p} />,
+  operatorReports:     (p) => <OperatorReports {...p} />,
+  sendAlert:           (p) => <SendAlert {...p} />,
+  adminHub:            (p) => <AdminHub {...p} />,
+  adminAdministrators: (p) => <AdminAdministrators {...p} />,
+  adminSupervisors:    (p) => <AdminSupervisors {...p} />,
+  adminOperators:      (p) => <AdminOperators {...p} />,
+  adminHomeowners:     (p) => <AdminHomeowners {...p} />,
+  adminProperties:     (p) => <AdminProperties {...p} />,
+  profileEdit:         (p) => <ProfileEdit {...p} />,
+  photoGallery:        (p) => <PhotoGallery {...p} />,
 };
 
 const TABS = [
@@ -25,10 +33,19 @@ const TABS = [
   { id:"alerts",     icon:"bell",             label:"Alerts" },
   { id:"more",       icon:"menu-deep",        label:"More" },
 ];
-const TAB_OF = { vendors:"more", adminUsers:"more", adminChecklist:"more", adminInbox:"more", operatorReports:"more", sendAlert:"more" };
+const TAB_OF = {
+  vendors:"more", adminUsers:"more", adminChecklist:"more", adminInbox:"more",
+  operatorReports:"more", sendAlert:"more", adminHub:"more", adminAdministrators:"more",
+  adminSupervisors:"more", adminOperators:"more", adminHomeowners:"more",
+  adminProperties:"more", profileEdit:"more", photoGallery:"properties",
+};
 
 const FULL_SCREENS  = new Set(["inspection"]);
-const NOTAB_SCREENS = new Set(["property","adminUsers","adminChecklist","adminInbox","sendAlert"]);
+const NOTAB_SCREENS = new Set([
+  "property","adminUsers","adminChecklist","adminInbox","sendAlert",
+  "adminHub","adminAdministrators","adminSupervisors","adminOperators","adminHomeowners",
+  "adminProperties","profileEdit","photoGallery",
+]);
 
 function App({ user, onLogout }) {
   const [stack,      setStack]      = useState([{ name:"dashboard", props:{} }]);

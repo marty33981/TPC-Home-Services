@@ -753,17 +753,17 @@ function isoToDateLabel(iso) {
   return d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
 }
 
-function ScheduleSheet({ item, defaultDate, onSave, onClose }) {
+function ScheduleSheet({ item, defaultDate, defaultProp, defaultType, onSave, onClose }) {
   const [fsProps, setFsProps] = useState([]);
   useEffect(() => {
     FBUTIL.listProperties().then(list => {
       setFsProps(list.map(p => p.name));
-      if (!item?.prop && list.length > 0) setProp(p => p || list[0].name);
+      if (!item?.prop && !defaultProp && list.length > 0) setProp(p => p || list[0].name);
     });
   }, []);
   const PROPS = fsProps;
-  const [prop,   setProp]   = useState(item?.prop   || "");
-  const [type,   setType]   = useState(item?.type   || "Weekly inspection");
+  const [prop,   setProp]   = useState(item?.prop   || defaultProp || "");
+  const [type,   setType]   = useState(item?.type   || defaultType || "Weekly inspection");
   const todayStr = new Date().toISOString().slice(0, 10);
   const initDate = dateLabelToISO(item?.date) || defaultDate || "";
   const [date,   setDate]   = useState(initDate >= todayStr ? initDate : (item ? initDate : todayStr));
@@ -780,7 +780,7 @@ function ScheduleSheet({ item, defaultDate, onSave, onClose }) {
       icon: type.toLowerCase().includes("storm") ? "ti-storm" : "ti-home" });
   };
 
-  const TYPES = ["Weekly inspection", "Bi-weekly inspection", "Monthly inspection", "Storm check", "Move-in check", "Move-out check"];
+  const TYPES = ["Weekly inspection", "Bi-weekly inspection", "Monthly inspection", "Storm Prep", "Post-Storm Check", "Move-in check", "Move-out check"];
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(15,28,63,0.35)", zIndex:99,
