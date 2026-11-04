@@ -191,8 +191,8 @@ function Root() {
       if (fbUser) {
         try {
           let profile = await FBUTIL.getUserProfile(fbUser.uid);
+          const email = (fbUser.email || "").toLowerCase();
           if (!profile) {
-            const email = (fbUser.email || "").toLowerCase();
             let role = "operator";
             let isProtected = false;
             let name = fbUser.displayName || fbUser.email.split("@")[0];
@@ -207,6 +207,15 @@ function Root() {
               protected: isProtected,
             };
             await FBUTIL.createUserProfile(fbUser.uid, profile);
+          } else {
+            // Enforce correct roles for known accounts — fixes existing profiles with wrong role
+            if (email === "marty@truexpreferredconstruction.com" && profile.role !== "administrator") {
+              await FBUTIL.updateUserProfile(fbUser.uid, { role: "administrator", protected: true });
+              profile = { ...profile, role: "administrator", protected: true };
+            } else if (email === "gina@truexpreferredconstruction.com" && profile.role !== "supervisor") {
+              await FBUTIL.updateUserProfile(fbUser.uid, { role: "supervisor" });
+              profile = { ...profile, role: "supervisor" };
+            }
           }
           const displayName = profile.name || fbUser.displayName || fbUser.email.split("@")[0] || "User";
           const fullUser = {
