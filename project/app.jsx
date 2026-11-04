@@ -47,10 +47,32 @@ const NOTAB_SCREENS = new Set([
   "adminProperties","profileEdit","photoGallery",
 ]);
 
+function PreviewBanner({ role, onExit }) {
+  const labels = { operator:"Operator", homeowner:"Homewatch" };
+  return (
+    <div style={{ background:"var(--pine)", color:"#fff", padding:"8px 20px",
+      display:"flex", alignItems:"center", justifyContent:"space-between",
+      fontSize:12.5, fontWeight:700, flexShrink:0 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+        <Icon name="eye" size={14} color="rgba(255,255,255,0.75)" />
+        Previewing as {labels[role] || role}
+      </div>
+      <button onClick={onExit} style={{ background:"rgba(255,255,255,0.2)", border:"none",
+        color:"#fff", padding:"4px 12px", borderRadius:999, fontSize:11, fontWeight:700,
+        cursor:"pointer", fontFamily:"var(--sans)" }}>
+        Exit
+      </button>
+    </div>
+  );
+}
+
 function App({ user, onLogout }) {
   const [stack,      setStack]      = useState([{ name:"dashboard", props:{} }]);
   const [alertCount, setAlertCount] = useState(0);
+  const [viewAs,     setViewAs]     = useState(null); // null = real role
   const depthRef = useRef(1);
+
+  const effectiveUser = viewAs ? { ...user, role: viewAs } : user;
 
   const refreshAlertCount = React.useCallback(() => {
     if (typeof FBUTIL !== "undefined") {
@@ -60,11 +82,31 @@ function App({ user, onLogout }) {
 
   useEffect(() => { refreshAlertCount(); }, []);
 
+  const handleSwitchView = React.useCallback((role) => {
+    const next = (role === user.role) ? null : role;
+    AUTH.currentUser = next ? { ...user, role: next } : user;
+    setViewAs(next);
+    setStack([{ name:"dashboard", props:{} }]);
+    depthRef.current = 1;
+  }, [user.role]);
+
   const nav = {
     go:   (name)           => setStack([{ name, props:{} }]),
     push: (name, props={}) => setStack(s => [...s, { name, props }]),
     back: ()               => setStack(s => s.length > 1 ? s.slice(0,-1) : s),
   };
+
+  // Homeowner preview — render OwnerApp with banner
+  if (viewAs === "homeowner") {
+    return (
+      <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
+        <PreviewBanner role="homeowner" onExit={() => handleSwitchView(null)} />
+        <div style={{ flex:1, minHeight:0, overflow:"hidden" }}>
+          <OwnerApp user={effectiveUser} onLogout={onLogout} />
+        </div>
+      </div>
+    );
+  }
 
   const cur       = stack[stack.length-1];
   const activeTab = TAB_OF[cur.name] || cur.name;
@@ -76,9 +118,11 @@ function App({ user, onLogout }) {
   const animClass = pushed || NOTAB_SCREENS.has(cur.name) || isFull ? "anim-slide" : "anim-fade";
 
   const screenEl = (SCREENS[cur.name] || SCREENS.dashboard)({
-    ...cur.props, nav, user, onLogout,
+    ...cur.props, nav, user: effectiveUser, onLogout,
     canGoBack: stack.length > 1,
     onAlertsCleared: refreshAlertCount,
+    onSwitchView: handleSwitchView,
+    previewRole: viewAs,
   });
 
   if (isFull) {
@@ -87,6 +131,7 @@ function App({ user, onLogout }) {
 
   return (
     <div className="hw-app">
+      {viewAs && <PreviewBanner role={viewAs} onExit={() => handleSwitchView(null)} />}
       <div key={cur.name + stack.length} className={animClass}
         style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0 }}>
         {screenEl}

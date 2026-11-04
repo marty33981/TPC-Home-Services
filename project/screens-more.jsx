@@ -967,7 +967,7 @@ function DataManageSheet({ type, onClose }) {
 }
 
 // ── MORE ─────────────────────────────────────────────────────
-function More({ nav, user, onLogout, canGoBack, onSwitchView }) {
+function More({ nav, user, onLogout, canGoBack, onSwitchView, previewRole }) {
   const isAdmin      = AUTH.isAdmin();
   const isSupervisor = AUTH.isSupervisor();
   const isOperator   = AUTH.isOperator();
@@ -1034,6 +1034,38 @@ function More({ nav, user, onLogout, canGoBack, onSwitchView }) {
         </div>
         <Icon name="chevron-right" size={18} color="var(--ink-3)" />
       </button>
+
+      {/* view selector — admin only */}
+      {onSwitchView && (
+        <div style={{ padding:"12px 20px 0" }}>
+          <div style={{ fontSize:10.5, fontWeight:700, color:"var(--ink-3)",
+            textTransform:"uppercase", letterSpacing:0.6, marginBottom:7 }}>Preview as</div>
+          <div style={{ display:"flex", background:"var(--bg-2)", borderRadius:10,
+            padding:3, border:"1px solid var(--line)", gap:2 }}>
+            {[
+              { role:"administrator", label:"Administrator", icon:"shield-check" },
+              { role:"operator",      label:"Operator",      icon:"hard-hat"     },
+              { role:"homeowner",     label:"Homewatch",     icon:"home-heart"   },
+            ].map(opt => {
+              const active = (previewRole || "administrator") === opt.role;
+              return (
+                <button key={opt.role} onClick={() => onSwitchView(opt.role)}
+                  style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
+                    gap:3, padding:"8px 4px", border:"none", cursor:"pointer",
+                    fontFamily:"var(--sans)", borderRadius:8, transition:"all .15s",
+                    background: active ? "var(--surface)" : "transparent",
+                    color: active ? "var(--pine)" : "var(--ink-3)",
+                    boxShadow: active ? "var(--shadow-sm)" : "none" }}>
+                  <Icon name={opt.icon} size={16} color={active ? "var(--pine)" : "var(--ink-3)"} />
+                  <span style={{ fontSize:10, fontWeight: active ? 800 : 600, letterSpacing:0.1 }}>
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* receive reports toggle — shown to all operators */}
       {isOperator && (
