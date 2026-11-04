@@ -101,8 +101,11 @@ function App({ user, onLogout }) {
     return (
       <div style={{ display:"flex", flexDirection:"column", height:"100%", overflow:"hidden" }}>
         <PreviewBanner role="homeowner" onExit={() => handleSwitchView(null)} />
-        <div style={{ flex:1, minHeight:0, overflow:"hidden" }}>
-          <OwnerApp user={effectiveUser} onLogout={onLogout} />
+        {/* position:relative + absolute inner gives .hw-app a proper height:100% containing block */}
+        <div style={{ position:"relative", flex:1, minHeight:0 }}>
+          <div style={{ position:"absolute", inset:0 }}>
+            <OwnerApp user={effectiveUser} onLogout={onLogout} />
+          </div>
         </div>
       </div>
     );
