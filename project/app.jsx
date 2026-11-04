@@ -130,12 +130,19 @@ function Root() {
         try {
           let profile = await FBUTIL.getUserProfile(fbUser.uid);
           if (!profile) {
+            const email = (fbUser.email || "").toLowerCase();
+            let role = "operator";
+            let isProtected = false;
+            let name = fbUser.displayName || fbUser.email.split("@")[0];
+            if (email === "marty@truexpreferredconstruction.com") {
+              role = "administrator"; isProtected = true; name = "Marty Truex";
+            } else if (email === "gina@truexpreferredconstruction.com") {
+              role = "supervisor"; name = "Gina";
+            }
             profile = {
-              name:      fbUser.displayName || fbUser.email.split("@")[0],
-              email:     fbUser.email,
-              role:      "operator",
-              initials:  (fbUser.displayName || fbUser.email).slice(0, 2).toUpperCase(),
-              protected: false,
+              name, email: fbUser.email, role,
+              initials: name.slice(0, 2).toUpperCase(),
+              protected: isProtected,
             };
             await FBUTIL.createUserProfile(fbUser.uid, profile);
           }

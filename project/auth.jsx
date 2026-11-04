@@ -574,50 +574,78 @@ function AdminUsers({ nav }) {
             </>
           )}
 
-          {!loading && visibleUsers.map(u => (
-            <div key={u.id} className="card" style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ width:40, height:40, borderRadius:999, background:"var(--pine)", color:"#fff",
-                display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:14, flexShrink:0 }}>
-                {(u.initials || u.name.slice(0,2)).toUpperCase()}
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                  <span style={{ fontWeight:700, fontSize:15 }}>{u.name}</span>
-                  {u.protected && <Icon name="shield-check" size={14} color="var(--pine)" />}
+          {!loading && (() => {
+            const renderUser = u => (
+              <div key={u.id} className="card" style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:999, background:"var(--pine)", color:"#fff",
+                  display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:14, flexShrink:0 }}>
+                  {(u.initials || u.name.slice(0,2)).toUpperCase()}
                 </div>
-                <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1, overflow:"hidden",
-                  textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.email}</div>
-                <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
-                  <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:999,
-                    background:roleBg[u.role]||"var(--bg-2)", color:roleColor[u.role]||"var(--ink-2)" }}>
-                    {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                  </span>
-                  {u.receiveReports && (u.role === "supervisor" || u.role === "administrator") && (
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                    <span style={{ fontWeight:700, fontSize:15 }}>{u.name}</span>
+                    {u.protected && <Icon name="shield-check" size={14} color="var(--pine)" />}
+                  </div>
+                  <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1, overflow:"hidden",
+                    textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{u.email}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
                     <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:999,
-                      background:"var(--info-bg)", color:"var(--info)" }}>
-                      Reports on
+                      background:roleBg[u.role]||"var(--bg-2)", color:roleColor[u.role]||"var(--ink-2)" }}>
+                      {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                     </span>
-                  )}
+                    {u.receiveReports && (u.role === "supervisor" || u.role === "administrator") && (
+                      <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:999,
+                        background:"var(--info-bg)", color:"var(--info)" }}>
+                        Reports on
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {!u.protected && !(isSupervisor && u.role === "supervisor") && (
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={() => setModal(u)}
+                      style={{ width:34, height:34, borderRadius:10, border:"none",
+                        background:"var(--info-bg)", color:"var(--info)",
+                        display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+                      <Icon name="edit" size={17} />
+                    </button>
+                    <button onClick={() => setConfirmDelete(u.id)}
+                      style={{ width:34, height:34, borderRadius:10, border:"none",
+                        background:"var(--danger-bg)", color:"var(--danger)",
+                        display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+                      <Icon name="trash" size={17} />
+                    </button>
+                  </div>
+                )}
               </div>
-              {!u.protected && !(isSupervisor && u.role === "supervisor") && (
-                <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={() => setModal(u)}
-                    style={{ width:34, height:34, borderRadius:10, border:"none",
-                      background:"var(--info-bg)", color:"var(--info)",
-                      display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-                    <Icon name="edit" size={17} />
-                  </button>
-                  <button onClick={() => setConfirmDelete(u.id)}
-                    style={{ width:34, height:34, borderRadius:10, border:"none",
-                      background:"var(--danger-bg)", color:"var(--danger)",
-                      display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-                    <Icon name="trash" size={17} />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+
+            const sections = isAdmin
+              ? [
+                  { label:"Administrators", icon:"shield-check", color:"var(--pine)",   bg:"var(--mint-bg)",  roles:["administrator"] },
+                  { label:"Supervisors",    icon:"eye",          color:"var(--ok)",     bg:"var(--ok-bg)",   roles:["supervisor"] },
+                  { label:"Operators",      icon:"tool",         color:"var(--info)",   bg:"var(--info-bg)", roles:["operator"] },
+                  { label:"Homeowners",     icon:"home",         color:"var(--warn)",   bg:"var(--warn-bg)", roles:["homeowner"] },
+                ]
+              : [
+                  { label:"Operators",  icon:"tool", color:"var(--info)", bg:"var(--info-bg)", roles:["operator"] },
+                  { label:"Homeowners", icon:"home", color:"var(--warn)", bg:"var(--warn-bg)", roles:["homeowner"] },
+                ];
+
+            return sections.map(sec => {
+              const group = visibleUsers.filter(u => sec.roles.includes(u.role));
+              if (group.length === 0) return null;
+              return (
+                <React.Fragment key={sec.label}>
+                  <div className="eyebrow" style={{ paddingLeft:2, marginTop:8, display:"flex", alignItems:"center", gap:5 }}>
+                    <Icon name={sec.icon} size={12} color={sec.color} />
+                    {sec.label} ({group.length})
+                  </div>
+                  {group.map(renderUser)}
+                </React.Fragment>
+              );
+            });
+          })()}
         </div>
       </div>
 

@@ -388,6 +388,14 @@ function Vendors({ nav }) {
 function More({ nav, user, onLogout }) {
   const isAdmin      = AUTH.isAdmin();
   const isSupervisor = AUTH.isSupervisor();
+  const [inspCount, setInspCount] = React.useState(0);
+  React.useEffect(() => {
+    if (isSupervisor || isAdmin) {
+      FBUTIL.getAdminMessages().then(msgs => {
+        setInspCount(msgs.filter(m => m.type === "inspection").length);
+      }).catch(() => {});
+    }
+  }, []);
 
   const links = [
     { icon:"tools",    label:"Vendors",   sub:"Trusted partners", go:()=>nav.go("vendors") },
