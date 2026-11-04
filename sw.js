@@ -1,7 +1,7 @@
 // TPC Home Services — Service Worker
 // Cache-first for app shell; network-first for dynamic data.
 
-const CACHE = 'tpc-homewatch-v2';
+const CACHE = 'tpc-homewatch-v3';
 
 // Derive base path from SW location so this works on any subdirectory (e.g. GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
