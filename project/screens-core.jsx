@@ -90,8 +90,8 @@ function ScheduleRow({ item, nav, delay = 0, onEdit, onDelete, conflict = false 
       <button onClick={() => nav.push("inspection", { schedId:item.id })} className="tap"
         style={{ flex:1, display:"flex", alignItems:"center", gap:13, padding:"13px 14px", border:"none", textAlign:"left", cursor:"pointer", background:"transparent" }}>
         <div style={{ width:54, flexShrink:0, textAlign:"center" }}>
-          <div className="tnum" style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, color:"var(--ink)" }}>{item.time.split(" ")[0]}</div>
-          <div style={{ fontSize:11, fontWeight:700, color:"var(--ink-3)" }}>{item.time.split(" ")[1]}</div>
+          <div className="tnum" style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, color:"var(--ink)" }}>{(item.time||"").split(" ")[0] || "—"}</div>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--ink-3)" }}>{(item.time||"").split(" ")[1]}</div>
         </div>
         <div style={{ width:1, alignSelf:"stretch", background:"var(--line)" }} />
         <div style={{ flex:1, minWidth:0 }}>
@@ -287,7 +287,7 @@ function Schedule({ nav, user, canGoBack }) {
   const toggleMonth = key => setExpandedMonths(s => { const n=new Set(s); n.has(key)?n.delete(key):n.add(key); return n; });
   const toggleWeek  = key => setCollapsedWeeks(s => { const n=new Set(s); n.has(key)?n.delete(key):n.add(key); return n; });
 
-  const loadSchedule = () => FBUTIL.listSchedule().then(list => setFsSchedule(list));
+  const loadSchedule = () => FBUTIL.listSchedule().then(list => setFsSchedule(list)).catch(() => setFsSchedule([]));
   useEffect(() => { loadSchedule(); }, []);
 
   const loading  = fsSchedule === null;
@@ -657,8 +657,8 @@ function DaySheet({ day, items, isAdmin, onClose, onAdd, onEdit, onDelete, onVie
           {items.map(s => (
             <div key={s.id} className="card" style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
               <div style={{ width:48, flexShrink:0, textAlign:"center" }}>
-                <div className="tnum" style={{ fontSize:14, fontWeight:800 }}>{s.time.split(" ")[0]}</div>
-                <div style={{ fontSize:10.5, fontWeight:700, color:"var(--ink-3)" }}>{s.time.split(" ")[1]}</div>
+                <div className="tnum" style={{ fontSize:14, fontWeight:800 }}>{(s.time||"").split(" ")[0] || "—"}</div>
+                <div style={{ fontSize:10.5, fontWeight:700, color:"var(--ink-3)" }}>{(s.time||"").split(" ")[1]}</div>
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontWeight:700, fontSize:14.5 }}>{s.name}</div>

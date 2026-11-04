@@ -359,8 +359,8 @@ function Alerts({ nav, canGoBack, onAlertsCleared }) {
   };
 
   const load = () => {
-    FBUTIL.getAllHomeownerAlerts().then(setAlerts);
-    if (canClear) FBUTIL.getAllOperatorAlerts().then(setOpAlerts);
+    FBUTIL.getAllHomeownerAlerts().then(setAlerts).catch(() => setAlerts([]));
+    if (canClear) FBUTIL.getAllOperatorAlerts().then(setOpAlerts).catch(() => setOpAlerts([]));
   };
   React.useEffect(() => { load(); }, []);
 

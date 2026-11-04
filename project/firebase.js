@@ -472,6 +472,24 @@ window.FBUTIL = {
     await db.collection('homeownerAlerts').doc(id).delete();
   },
 
+  async getAllOperatorAlerts() {
+    const snap = await db.collection('operatorAlerts')
+      .orderBy('createdAt', 'desc').limit(200).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async createOperatorAlert(data) {
+    const ref = await db.collection('operatorAlerts').add({
+      ...data,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  },
+
+  async deleteOperatorAlert(id) {
+    await db.collection('operatorAlerts').doc(id).delete();
+  },
+
   // ── Access log ───────────────────────────────────────────────
 
   async logAccessView(propId, propName) {
