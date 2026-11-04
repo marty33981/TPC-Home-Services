@@ -2,7 +2,7 @@
 // TPC HomeWatch — seed data (ported from app.py)
 // ─────────────────────────────────────────────────────────────
 window.HW = {
-  version: { number: "1.2.0", build: "20260601", date: "June 1, 2026" },
+  version: { number: "2.4.3", build: "20261104", date: "November 4, 2026" },
   brand: { name: "TPC HomeWatch", short: "TPC", operator: "Maria Reyes", initials: "MR",
            region: "Naples · Bonita Springs · Sarasota" },
 
