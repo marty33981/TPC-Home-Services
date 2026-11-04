@@ -4,21 +4,50 @@
 
 // ── LIVE INSPECTION ──────────────────────────────────────────
 function Inspection({ schedId, nav, user }) {
-  const item = HW.schedule.find(s => s.id === schedId) || HW.schedule[0];
-  const prop = HW.properties.find(p => p.name === item.prop) || HW.properties[0];
+  const [item,      setItem]      = useState(null);
+  const [prop,      setProp]      = useState(null);
+  const [checklist, setChecklist] = useState(HW.checklist);
+  const [loading,   setLoading]   = useState(true);
   const [checked, setChecked] = useState({});
   const [flagged, setFlagged] = useState({});
   const [notes,   setNotes]   = useState("");
   const [done, setDone] = useState(false);
   const role = (user || AUTH.currentUser || {}).role || "operator";
 
-  const total = HW.checklist.length;
+  useEffect(() => {
+    const load = async () => {
+      let schedItem = null;
+      if (schedId) {
+        schedItem = await FBUTIL.getScheduleItem(String(schedId));
+      }
+      if (!schedItem) schedItem = HW.schedule[0] || { name:"Inspection", prop:"Property" };
+      setItem(schedItem);
+      const propData = await FBUTIL.getPropertyByName(schedItem.prop);
+      setProp(propData || { name: schedItem.prop || "Property" });
+      if (propData?.id) {
+        const cl = await FBUTIL.getChecklistForProp(propData.id);
+        if (cl && cl.length > 0) setChecklist(cl);
+      }
+      setLoading(false);
+    };
+    load();
+  }, [schedId]);
+
+  if (loading || !item || !prop) {
+    return (
+      <div className="hw-app" style={{ display:"flex", alignItems:"center", justifyContent:"center", background:"var(--bg)" }}>
+        <div style={{ fontSize:13, color:"var(--ink-3)", fontWeight:600 }}>Loading inspection…</div>
+      </div>
+    );
+  }
+
+  const total = checklist.length;
   const count = Object.values(checked).filter(Boolean).length;
   const pct = Math.round((count/total)*100);
 
   // group by category
   const groups = {};
-  HW.checklist.forEach(c => { (groups[c.cat] = groups[c.cat] || []).push(c); });
+  checklist.forEach(c => { (groups[c.cat] = groups[c.cat] || []).push(c); });
 
   const toggle = id => setChecked(c => ({ ...c, [id]: !c[id] }));
   const flag = (id, e) => { e.stopPropagation(); setFlagged(f => ({ ...f, [id]: !f[id] })); };
@@ -86,7 +115,7 @@ function Inspection({ schedId, nav, user }) {
         </button>
       </div>
 
-      {done && <CompleteSheet item={item} prop={prop} count={count} total={total} flagged={Object.values(flagged).filter(Boolean).length} notes={notes} nav={nav} />}
+      {done && <CompleteSheet item={item} prop={prop} count={count} total={total} flagged={Object.values(flagged).filter(Boolean).length} notes={notes} nav={nav} photoCount={HW.photos.length} />}
     </div>
   );
 }
@@ -130,7 +159,7 @@ function Ring({ pct }) {
   );
 }
 
-function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
+function CompleteSheet({ item, prop, count, total, flagged, notes, nav, photoCount = 0 }) {
   const [sent, setSent] = useState(false);
 
   const sendReport = () => {
@@ -145,7 +174,7 @@ function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
     setTimeout(nav.back, 1800);
   };
 
-  const notifyNames = AUTH.users.filter(u => u.notifyOnInspection).map(u => u.name).join(" & ") || "Administrator";
+  const notifyNames = "Administrator";
 
   return (
     <div style={{ position:"absolute", inset:0, zIndex:30, display:"flex", flexDirection:"column", justifyContent:"flex-end",
@@ -160,7 +189,7 @@ function CompleteSheet({ item, prop, count, total, flagged, notes, nav }) {
         <div style={{ display:"flex", gap:11, margin:"22px 0 24px" }}>
           <SummaryStat v={`${count}/${total}`} l="Checks done" />
           <SummaryStat v={flagged} l="Issues flagged" tone={flagged?"var(--danger)":"var(--ink)"} />
-          <SummaryStat v={HW.photos.length} l="Photos" />
+          <SummaryStat v={photoCount} l="Photos" />
         </div>
         {sent ? (
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, padding:"16px",
@@ -359,26 +388,22 @@ function Vendors({ nav }) {
 function More({ nav, user, onLogout }) {
   const isAdmin      = AUTH.isAdmin();
   const isSupervisor = AUTH.isSupervisor();
-  const msgCount     = AUTH.getAdminMessages().length;
-  const inspCount    = AUTH.getAdminMessages().filter(m => m.type === "inspection").length;
 
   const links = [
-    { icon:"tools",       label:"Vendors",       sub:"4 partners",           go:()=>nav.go("vendors") },
-    { icon:"file-text",   label:"Reports",        sub:"Owner-ready summaries" },
-    { icon:"bell",        label:"Notifications" },
-    { icon:"settings",    label:"Settings" },
+    { icon:"tools",    label:"Vendors",   sub:"Trusted partners", go:()=>nav.go("vendors") },
+    { icon:"file-report", label:"Reports", sub:"Inspection reports", go:()=>nav.push("operatorReports") },
   ];
 
   const adminLinks = [
-    { icon:"users",         label:"User Management",    sub:"Add or edit users",      go:()=>nav.push("adminUsers") },
-    { icon:"clipboard-list",label:"Edit Checklist",     sub:"Inspection items",       go:()=>nav.push("adminChecklist") },
-    { icon:"message-2",     label:"Homeowner Messages", sub: msgCount > 0 ? `${msgCount} message${msgCount>1?"s":""}` : "No new messages", go:()=>nav.push("adminInbox") },
+    { icon:"users",         label:"User Management",    sub:"Add or edit users",   go:()=>nav.push("adminUsers") },
+    { icon:"clipboard-list",label:"Edit Checklist",     sub:"Inspection items",    go:()=>nav.push("adminChecklist") },
+    { icon:"message-2",     label:"Homeowner Messages", sub:"Inbox",               go:()=>nav.push("adminInbox") },
+    { icon:"send",          label:"Send Alert",         sub:"Notify homeowner",    go:()=>nav.push("sendAlert") },
   ];
 
   const supervisorLinks = [
-    { icon:"clipboard-check", label:"Inspection Reports",
-      sub: inspCount > 0 ? `${inspCount} report${inspCount>1?"s":""}` : "No reports yet",
-      go:()=>nav.push("adminInbox") },
+    { icon:"clipboard-check", label:"Inspection Reports", sub:"Review completed inspections", go:()=>nav.push("adminInbox") },
+    { icon:"file-report",     label:"Operator Reports",   sub:"View & post reports",          go:()=>nav.push("operatorReports") },
   ];
 
   const u = user || AUTH.currentUser;

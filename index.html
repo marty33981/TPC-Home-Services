@@ -55,6 +55,18 @@
   <script src="vendor/react-dom.js"></script>
   <script src="vendor/babel.min.js"></script>
 
+  <!-- Firebase compat SDK (must load before config.js / firebase.js) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+  <!-- App config (HW_CONFIG + validatePassword) -->
+  <script src="project/config.js"></script>
+
+  <!-- Firebase initialisation + FBUTIL helpers -->
+  <script src="project/firebase.js"></script>
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

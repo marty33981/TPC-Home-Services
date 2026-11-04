@@ -3,49 +3,33 @@
 // ─────────────────────────────────────────────────────────────
 
 // ── DASHBOARD ────────────────────────────────────────────────
-function Dashboard({ nav }) {
-  const urgent = HW.schedule.find(s => s.status === "urgent");
-  const today = HW.schedule.filter(s => s.date === "May 15");
+function Dashboard({ nav, canGoBack, user }) {
+  const [activeCount, setActiveCount] = useState(HW.stats.active_properties);
+  useEffect(() => {
+    FBUTIL.listProperties().then(list => { if (list.length > 0) setActiveCount(list.length); });
+  }, []);
+  const urgent = null; // no hardcoded urgent banners
+  const today = [];
   const stats = HW.stats;
   const statCards = [
-    { icon:"home",          v:stats.active_properties, l:"Active properties", c:"var(--pine)",  bg:"var(--mint-bg)" },
-    { icon:"alert-triangle",v:stats.alerts_open,        l:"Open alerts",       c:"var(--danger)",bg:"var(--danger-bg)" },
-    { icon:"calendar-check",v:stats.visits_this_week,   l:"Visits this week",  c:"var(--info)",  bg:"var(--info-bg)" },
-    { icon:"file-text",     v:stats.reports_sent,        l:"Reports sent",      c:"var(--warn)",  bg:"var(--warn-bg)" },
+    { icon:"home",          v:activeCount,             l:"Active properties", c:"var(--pine)",  bg:"var(--mint-bg)",   go:() => nav.go("properties") },
+    { icon:"alert-triangle",v:stats.alerts_open,        l:"Open alerts",       c:"var(--danger)",bg:"var(--danger-bg)", go:() => nav.go("alerts") },
+    { icon:"calendar-check",v:stats.visits_this_week,   l:"Visits this week",  c:"var(--info)",  bg:"var(--info-bg)",   go:() => nav.go("schedule") },
+    { icon:"file-text",     v:stats.reports_sent,        l:"Reports sent",      c:"var(--warn)",  bg:"var(--warn-bg)",   go:() => nav.go("operatorReports") },
   ];
   return (
     <div className="hw-scroll">
-      <AppHeader large={false} />
+      <AppHeader large={false} onBack={canGoBack ? nav.back : null} />
       {/* greeting */}
       <div style={{ padding:"4px 20px 6px" }} className="anim-fade">
-        <div className="eyebrow" style={{ marginBottom:8 }}>Thursday, May 15</div>
+        <div className="eyebrow" style={{ marginBottom:8 }}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
         <h1 style={{ margin:0, fontSize:34, fontWeight:500, letterSpacing:-0.5, lineHeight:1.06, fontFamily:"var(--greet-font)" }}>
-          Good morning,<br/><span style={{ fontStyle:"italic" }}>Maria</span>
+          {new Date().getHours() < 12 ? "Good morning," : new Date().getHours() < 17 ? "Good afternoon," : "Good evening,"}<br/><span style={{ fontStyle:"italic" }}>{((user || AUTH.currentUser)?.name || HW.brand.operator).split(" ")[0]}</span>
         </h1>
         <p style={{ margin:"10px 0 0", color:"var(--ink-2)", fontSize:15.5, fontWeight:500 }}>
-          3 properties need attention today.
+          {activeCount > 0 ? `${activeCount} ${activeCount === 1 ? "property" : "properties"} under watch.` : "No properties on file yet."}
         </p>
       </div>
-
-      {/* hurricane watch banner */}
-      {HW.hurricaneWatch && HW.hurricaneWatch.active && (
-        <div className="rise" style={{ margin:"14px 20px 0" }}>
-          <button onClick={() => nav.go("properties")} className="tap" style={{ width:"100%", textAlign:"left", border:"none",
-            background:"linear-gradient(135deg,#7A2800,#C45200)", color:"#fff", borderRadius:"var(--r)", padding:"13px 16px",
-            cursor:"pointer", display:"flex", alignItems:"center", gap:12, boxShadow:"0 6px 20px rgba(196,82,0,0.35)" }}>
-            <div style={{ width:40, height:40, borderRadius:11, background:"rgba(255,255,255,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <Icon name="hurricane" size={22} color="#fff" />
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:800, fontSize:14.5 }}>{HW.hurricaneWatch.name} · Hurricane Watch</div>
-              <div style={{ fontSize:12.5, opacity:0.85, marginTop:2 }}>
-                {HW.stats.hurricane_watch} properties at risk · {HW.hurricaneWatch.wind} winds · ETA {HW.hurricaneWatch.eta}
-              </div>
-            </div>
-            <Icon name="chevron-right" size={20} color="rgba(255,255,255,0.9)" />
-          </button>
-        </div>
-      )}
 
       {/* urgent banner */}
       {urgent && (
@@ -68,11 +52,13 @@ function Dashboard({ nav }) {
       {/* stats grid */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, padding:"18px 20px 0" }}>
         {statCards.map((s, i) => (
-          <div key={s.l} className="card rise" style={{ padding:"14px 15px", animationDelay:`${0.04*i}s` }}>
+          <button key={s.l} onClick={s.go} className="card rise tap"
+            style={{ padding:"14px 15px", animationDelay:`${0.04*i}s`, border:"none",
+              background:"var(--surface)", textAlign:"left", cursor:"pointer", display:"block", width:"100%" }}>
             <IconTile icon={s.icon} bg={s.bg} color={s.c} size={34} r={10} iconSize={18} />
             <div className="tnum" style={{ fontSize:28, fontWeight:800, letterSpacing:-0.8, marginTop:10, lineHeight:1 }}>{s.v}</div>
             <div style={{ fontSize:12.5, color:"var(--ink-2)", fontWeight:600, marginTop:3 }}>{s.l}</div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -87,29 +73,62 @@ function Dashboard({ nav }) {
       <div style={{ padding:"0 20px 8px", display:"flex", flexDirection:"column", gap:10 }}>
         {HW.alerts.slice(0,2).map((a,i) => <AlertRow key={a.id} a={a} nav={nav} delay={0.04*i} />)}
       </div>
+
+      {/* Install app nudge */}
+      <InstallNudge />
     </div>
   );
 }
 
 // schedule row (reused on dashboard + schedule)
-function ScheduleRow({ item, nav, delay = 0 }) {
+function ScheduleRow({ item, nav, delay = 0, onEdit, onDelete, conflict = false }) {
   return (
-    <button onClick={() => nav.push("inspection", { schedId:item.id })} className="card tap rise"
-      style={{ display:"flex", alignItems:"center", gap:13, padding:"13px 14px", border:"none", textAlign:"left", cursor:"pointer", width:"100%", animationDelay:`${delay}s` }}>
-      <div style={{ width:54, flexShrink:0, textAlign:"center" }}>
-        <div className="tnum" style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, color:"var(--ink)" }}>{item.time.split(" ")[0]}</div>
-        <div style={{ fontSize:11, fontWeight:700, color:"var(--ink-3)" }}>{item.time.split(" ")[1]}</div>
-      </div>
-      <div style={{ width:1, alignSelf:"stretch", background:"var(--line)" }} />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontWeight:700, fontSize:15, letterSpacing:-0.2 }}>{item.name}</div>
-        <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2, display:"flex", alignItems:"center", gap:5 }}>
-          <Icon name="map-pin" size={13} color="var(--ink-3)" />
-          <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.prop}</span>
+    <div className="card rise" style={{ display:"flex", alignItems:"center", gap:0, animationDelay:`${delay}s`, overflow:"hidden",
+      outline: conflict ? "2px solid var(--warn)" : "none" }}>
+      <button onClick={() => nav.push("inspection", { schedId:item.id })} className="tap"
+        style={{ flex:1, display:"flex", alignItems:"center", gap:13, padding:"13px 14px", border:"none", textAlign:"left", cursor:"pointer", background:"transparent" }}>
+        <div style={{ width:54, flexShrink:0, textAlign:"center" }}>
+          <div className="tnum" style={{ fontSize:15, fontWeight:800, letterSpacing:-0.3, color:"var(--ink)" }}>{item.time.split(" ")[0]}</div>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--ink-3)" }}>{item.time.split(" ")[1]}</div>
         </div>
-      </div>
-      <StatusPill status={item.status} dot={false} />
-    </button>
+        <div style={{ width:1, alignSelf:"stretch", background:"var(--line)" }} />
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontWeight:700, fontSize:15, letterSpacing:-0.2 }}>{item.name}</div>
+          <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2, display:"flex", alignItems:"center", gap:5 }}>
+            <Icon name="map-pin" size={13} color="var(--ink-3)" />
+            <span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{item.prop}</span>
+          </div>
+          {conflict && (
+            <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
+              <Icon name="alert-triangle" size={12} color="var(--warn)" />
+              <span style={{ fontSize:11.5, fontWeight:700, color:"var(--warn)" }}>Scheduling conflict</span>
+            </div>
+          )}
+        </div>
+        {item.date
+          ? <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-3)", whiteSpace:"nowrap", flexShrink:0 }}>{item.date}</span>
+          : <StatusPill status={item.status} dot={false} />}
+      </button>
+      {(onEdit || onDelete) && (
+        <div style={{ display:"flex", gap:0, borderLeft:"1px solid var(--line)", flexShrink:0 }}>
+          {onEdit && (
+            <button onClick={onEdit}
+              style={{ width:40, height:"100%", minHeight:60, border:"none", background:"transparent",
+                color:"var(--info)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <Icon name="edit" size={16} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={onDelete}
+              style={{ width:40, height:"100%", minHeight:60, border:"none", background:"transparent",
+                color:"var(--danger)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                borderLeft: onEdit ? "1px solid var(--line)" : "none" }}>
+              <Icon name="trash" size={16} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -132,239 +151,82 @@ function AlertRow({ a, nav, delay = 0 }) {
   );
 }
 
-// ── HURRICANE MANAGE SHEET ───────────────────────────────────
-function HurricaneManageSheet({ hurricanePropIds, onToggle, onClose }) {
-  return (
-    <div style={{ position:"absolute", inset:0, zIndex:20, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
-      {/* backdrop */}
-      <div onClick={onClose} style={{ position:"absolute", inset:0, background:"rgba(15,28,63,0.45)", backdropFilter:"blur(3px)" }} />
-      {/* sheet */}
-      <div style={{ position:"relative", background:"var(--bg)", borderRadius:"var(--r-lg) var(--r-lg) 0 0",
-        padding:"0 0 34px", maxHeight:"72%", display:"flex", flexDirection:"column",
-        animation:"hw-slide-up .3s cubic-bezier(.22,.61,.36,1) both" }}>
-        {/* handle */}
-        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 4px" }}>
-          <div style={{ width:36, height:4, borderRadius:999, background:"var(--line)" }} />
-        </div>
-        {/* header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 20px 14px" }}>
-          <div>
-            <div style={{ fontWeight:800, fontSize:17, letterSpacing:-0.3 }}>Hurricane Watch</div>
-            <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2 }}>Tap to add or remove properties</div>
-          </div>
-          <button onClick={onClose} style={{ border:"none", background:"var(--bg-2)", borderRadius:999, width:32, height:32,
-            display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-            <Icon name="x" size={17} color="var(--ink-2)" />
-          </button>
-        </div>
-        <Hr />
-        {/* property list */}
-        <div style={{ overflowY:"auto", padding:"8px 20px 0" }}>
-          {HW.properties.map(p => {
-            const on = hurricanePropIds.has(p.id);
-            return (
-              <button key={p.id} onClick={() => onToggle(p.id)} className="tap"
-                style={{ display:"flex", alignItems:"center", gap:13, width:"100%", padding:"13px 0",
-                  border:"none", background:"transparent", cursor:"pointer", textAlign:"left",
-                  borderBottom:"1px solid var(--line)" }}>
-                {/* toggle */}
-                <div style={{ width:28, height:28, borderRadius:8, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
-                  background: on ? "#C45200" : "var(--bg-2)", transition:"background .15s" }}>
-                  {on
-                    ? <Icon name="hurricane" size={16} color="#fff" />
-                    : <Icon name="plus" size={16} color="var(--ink-3)" />}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:700, fontSize:14.5, letterSpacing:-0.2 }}>{p.name}</div>
-                  <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:1 }}>{p.address.split(",")[0]}</div>
-                </div>
-                <StatusPill status={p.status} dot={false} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── HURRICANE WATCH SECTION ───────────────────────────────────
-function HurricaneWatchSection({ nav, hurricanePropIds, onManage }) {
-  const hw = HW.hurricaneWatch;
-  if (!hw || !hw.active) return null;
-  const props = HW.properties.filter(p => hurricanePropIds.has(p.id));
-  return (
-    <div style={{ margin:"16px 20px 0" }} className="rise">
-      {/* storm banner */}
-      <div style={{ background:"linear-gradient(135deg,#7A2800,#C45200)", borderRadius:"var(--r) var(--r) 0 0",
-        padding:"14px 16px 12px", color:"#fff", display:"flex", alignItems:"center", gap:12 }}>
-        <div style={{ width:44, height:44, borderRadius:12, background:"rgba(255,255,255,0.15)",
-          display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-          <Icon name="hurricane" size={26} color="#fff" />
-        </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:10.5, fontWeight:800, letterSpacing:0.12, textTransform:"uppercase", opacity:0.8 }}>
-            Hurricane Watch Active · {hw.counties.join(", ")} Counties
-          </div>
-          <div style={{ fontSize:17, fontWeight:800, letterSpacing:-0.3, marginTop:2 }}>{hw.name}</div>
-          <div style={{ fontSize:12.5, opacity:0.85, marginTop:2, display:"flex", gap:14 }}>
-            <span>💨 {hw.wind}</span>
-            <span>⏱ ETA {hw.eta}</span>
-          </div>
-        </div>
-        <div style={{ fontSize:10, fontWeight:700, opacity:0.7, textAlign:"right", flexShrink:0, lineHeight:1.4 }}>
-          Updated<br/>{hw.updated}
-        </div>
-      </div>
-      {/* affected properties */}
-      <div style={{ background:"#FFF0E0", borderRadius:"0 0 var(--r) var(--r)", padding:"10px 14px 12px", borderTop:"1px solid rgba(196,82,0,0.2)" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-          <div style={{ fontSize:11.5, fontWeight:800, color:"#C45200", letterSpacing:0.06, textTransform:"uppercase" }}>
-            {props.length} {props.length === 1 ? "property" : "properties"} under watch
-          </div>
-          <button onClick={onManage} style={{ display:"flex", alignItems:"center", gap:5, border:"none", cursor:"pointer",
-            background:"rgba(196,82,0,0.12)", borderRadius:999, padding:"5px 10px 5px 8px" }}>
-            <Icon name="adjustments-horizontal" size={13} color="#C45200" />
-            <span style={{ fontSize:12, fontWeight:800, color:"#C45200" }}>Manage</span>
-          </button>
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {props.length === 0 && (
-            <button onClick={onManage} className="tap" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-              padding:"12px", borderRadius:12, background:"rgba(196,82,0,0.08)", border:"1.5px dashed rgba(196,82,0,0.3)",
-              cursor:"pointer", width:"100%" }}>
-              <Icon name="plus" size={16} color="#C45200" />
-              <span style={{ fontSize:13.5, fontWeight:700, color:"#C45200" }}>Add properties to watch</span>
-            </button>
-          )}
-          {props.map(p => (
-            <button key={p.id} onClick={() => nav.push("property", { id:p.id })} className="tap"
-              style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 12px", borderRadius:12,
-                background:"#fff", border:"1.5px solid rgba(196,82,0,0.2)", boxShadow:"0 1px 4px rgba(196,82,0,0.08)",
-                cursor:"pointer", textAlign:"left", width:"100%" }}>
-              <Icon name="hurricane" size={20} color="#C45200" style={{ flexShrink:0 }} />
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontWeight:700, fontSize:14, color:"var(--ink)", letterSpacing:-0.2 }}>{p.name}</div>
-                <div style={{ fontSize:12, color:"#C45200", fontWeight:600, marginTop:1 }}>{p.address.split(",")[1]?.trim()}</div>
-              </div>
-              <StatusPill status={p.status} dot={false} />
-              <Icon name="chevron-right" size={17} color="rgba(196,82,0,0.5)" />
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── PROPERTIES LIST ──────────────────────────────────────────
-function Properties({ nav }) {
-  const [filter, setFilter] = useState("All");
-  const [showManage, setShowManage] = useState(false);
-  const [hurricanePropIds, setHurricanePropIds] = useState(
-    () => new Set(HW.properties.filter(p => p.hurricane).map(p => p.id))
-  );
-  const toggleHurricane = (id) => setHurricanePropIds(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
+function Properties({ nav, canGoBack, user }) {
+  const [filter,     setFilter]     = useState("All");
+  const [fsProps,    setFsProps]    = useState(null); // null = loading
+  const filters = ["All", "Needs attention", "Seasonal", "Vacant"];
 
-  const filters = ["All", "Hurricane Watch", "Needs attention", "Seasonal", "Vacant"];
-  const hurricaneActive = HW.hurricaneWatch && HW.hurricaneWatch.active;
-  const list = HW.properties.filter(p => {
-    if (filter === "Hurricane Watch") return hurricanePropIds.has(p.id);
+  const role = (user || AUTH.currentUser || {}).role || "operator";
+  const canManage = role === "administrator" || role === "supervisor";
+
+  useEffect(() => {
+    FBUTIL.listProperties().then(list => setFsProps(list));
+  }, []);
+
+  const allProps = fsProps && fsProps.length > 0 ? fsProps : HW.properties;
+
+  const list = allProps.filter(p => {
     if (filter === "All") return true;
     if (filter === "Needs attention") return p.status !== "active";
     return p.type === filter;
   });
+
   return (
-    <div style={{ position:"relative", height:"100%", display:"flex", flexDirection:"column" }}>
-      <div className="hw-scroll">
-        <AppHeader title="Properties" sub={`${HW.stats.active_properties} under watch`} />
-        {/* search */}
-        <div style={{ padding:"2px 20px 4px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:9, background:"var(--surface)", borderRadius:13, padding:"11px 14px", boxShadow:"var(--shadow-sm)" }}>
-            <Icon name="search" size={18} color="var(--ink-3)" />
-            <span style={{ color:"var(--ink-3)", fontSize:15 }}>Search properties or owners</span>
-          </div>
-        </div>
-        {/* filter chips */}
-        <div className="hscroll" style={{ padding:"12px 20px 4px" }}>
-          {filters.map(f => {
-            const isHurricane = f === "Hurricane Watch";
-            const active = filter === f;
-            const count = isHurricane ? hurricanePropIds.size : 0;
-            return (
-              <button key={f} onClick={() => setFilter(f)} style={{ flexShrink:0, border:"none", cursor:"pointer", whiteSpace:"nowrap",
-                padding:"8px 15px", borderRadius:999, fontSize:13.5, fontWeight:700, fontFamily:"var(--sans)",
-                background: active ? (isHurricane ? "#C45200" : "var(--pine)") : (isHurricane ? "#FFF0E0" : "var(--surface)"),
-                color: active ? "#fff" : (isHurricane ? "#C45200" : "var(--ink-2)"),
-                boxShadow: active ? "none" : "var(--shadow-sm)", transition:"all .15s",
-                display:"flex", alignItems:"center", gap:5 }}>
-                {isHurricane && <Icon name="hurricane" size={14} color={active ? "#fff" : "#C45200"} />}
-                {f}
-                {isHurricane && count > 0 && (
-                  <span style={{ background: active ? "rgba(255,255,255,0.25)" : "rgba(196,82,0,0.15)",
-                    borderRadius:999, padding:"1px 6px", fontSize:12 }}>{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {/* hurricane watch section — shown on All view */}
-        {filter === "All" && hurricaneActive && (
-          <HurricaneWatchSection nav={nav} hurricanePropIds={hurricanePropIds} onManage={() => setShowManage(true)} />
-        )}
-        {/* manage button on Hurricane Watch filter view */}
-        {filter === "Hurricane Watch" && (
-          <div style={{ padding:"10px 20px 0", display:"flex", justifyContent:"flex-end" }}>
-            <button onClick={() => setShowManage(true)} style={{ display:"flex", alignItems:"center", gap:6, border:"none", cursor:"pointer",
-              background:"#FFF0E0", borderRadius:999, padding:"7px 14px 7px 10px" }}>
-              <Icon name="adjustments-horizontal" size={15} color="#C45200" />
-              <span style={{ fontSize:13, fontWeight:800, color:"#C45200" }}>Manage</span>
+    <div className="hw-scroll">
+      <AppHeader title="Properties" sub={`${allProps.length} under watch`}
+        onBack={canGoBack ? nav.back : null}
+        right={canManage
+          ? <button onClick={() => nav.push("adminProperties")}
+              style={{ width:34, height:34, borderRadius:999, border:"none",
+                background:"var(--pine)", display:"flex", alignItems:"center",
+                justifyContent:"center", cursor:"pointer" }}>
+              <Icon name="plus" size={19} color="#fff" />
             </button>
-          </div>
-        )}
-        {/* cards */}
-        <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:14 }}>
-          {list.map((p,i) => (
-            <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} isHurricane={hurricanePropIds.has(p.id)} />
-          ))}
+          : null} />
+      <div style={{ padding:"2px 20px 4px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:9, background:"var(--surface)",
+          borderRadius:13, padding:"11px 14px", boxShadow:"var(--shadow-sm)" }}>
+          <Icon name="search" size={18} color="var(--ink-3)" />
+          <span style={{ color:"var(--ink-3)", fontSize:15 }}>Search properties or owners</span>
         </div>
       </div>
-      {showManage && (
-        <HurricaneManageSheet
-          hurricanePropIds={hurricanePropIds}
-          onToggle={toggleHurricane}
-          onClose={() => setShowManage(false)}
-        />
-      )}
+      <div className="hscroll" style={{ padding:"12px 20px 4px" }}>
+        {filters.map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flexShrink:0, border:"none",
+            cursor:"pointer", whiteSpace:"nowrap", padding:"8px 15px", borderRadius:999,
+            fontSize:13.5, fontWeight:700, fontFamily:"var(--sans)",
+            background: filter===f ? "var(--pine)" : "var(--surface)",
+            color: filter===f ? "var(--on-pine)" : "var(--ink-2)",
+            boxShadow: filter===f ? "none" : "var(--shadow-sm)", transition:"all .15s" }}>{f}</button>
+        ))}
+      </div>
+      <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:14 }}>
+        {fsProps === null
+          ? <div style={{ textAlign:"center", padding:"30px 0", color:"var(--ink-3)" }}>Loading…</div>
+          : list.map((p,i) => <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} />)
+        }
+      </div>
     </div>
   );
 }
 
-function PropertyCard({ p, nav, delay = 0, isHurricane = false }) {
+function PropertyCard({ p, nav, delay = 0 }) {
   return (
     <button onClick={() => nav.push("property", { id:p.id })} className="tap rise"
       style={{ border:"none", padding:0, cursor:"pointer", textAlign:"left", borderRadius:"var(--r)", overflow:"hidden",
         background:"var(--surface)", boxShadow:"var(--shadow)", width:"100%", animationDelay:`${delay}s` }}>
-      {/* gradient header */}
-      <div style={{ background:p.grad, padding:"15px 16px 14px", color:"#fff", position:"relative", overflow:"hidden" }}>
-        <Icon name="home" size={120} style={{ position:"absolute", right:-22, top:-16, opacity:0.1 }} color="#fff" />
-        {isHurricane && (
-          <div style={{ position:"absolute", top:10, right:10, display:"flex", alignItems:"center", gap:5,
-            background:"rgba(196,82,0,0.92)", borderRadius:999, padding:"4px 9px 4px 7px", backdropFilter:"blur(4px)" }}>
-            <Icon name="hurricane" size={13} color="#fff" />
-            <span style={{ fontSize:11, fontWeight:800, color:"#fff", letterSpacing:0.04 }}>Hurricane Watch</span>
-          </div>
-        )}
+      {/* photo/gradient header */}
+      <div style={{ background: p.photoUrl ? "transparent" : p.grad, padding:"15px 16px 14px", color:"#fff", position:"relative", overflow:"hidden" }}>
+        {p.photoUrl && <img src={p.photoUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />}
+        {p.photoUrl && <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 100%)" }} />}
+        {!p.photoUrl && <Icon name="home" size={120} style={{ position:"absolute", right:-22, top:-16, opacity:0.1 }} color="#fff" />}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, position:"relative" }}>
           <div>
             <div style={{ fontSize:11.5, fontWeight:700, letterSpacing:0.08, textTransform:"uppercase", opacity:0.85 }}>{p.type}</div>
             <div style={{ fontSize:19, fontWeight:800, letterSpacing:-0.3, marginTop:3 }}>{p.name}</div>
           </div>
-          {!isHurricane && <StatusPill status={p.status} dot={false} />}
+          <StatusPill status={p.status} dot={false} />
         </div>
       </div>
       {/* body */}
@@ -391,46 +253,622 @@ function Meta({ icon, label }) {
   );
 }
 
+// Parse a "Jun 17" date label to a Date object, guessing the year.
+// Dates more than 180 days in the past are assumed to be next year.
+function parseDateLabel(label) {
+  if (!label) return null;
+  const yr = new Date().getFullYear();
+  let d = new Date(`${label} ${yr}`);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  if ((now - d) > 180 * 86400000) d.setFullYear(yr + 1);
+  return d;
+}
+
+// Return the Monday of the week containing d.
+function weekMonday(d) {
+  const m = new Date(d);
+  const dow = m.getDay();
+  m.setDate(m.getDate() - (dow === 0 ? 6 : dow - 1));
+  return m;
+}
+
 // ── SCHEDULE ─────────────────────────────────────────────────
-function Schedule({ nav }) {
+function Schedule({ nav, user, canGoBack }) {
+  const [fsSchedule, setFsSchedule] = useState(null); // null = loading
+  const [addSheet, setAddSheet] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [daySheet, setDaySheet] = useState(null); // selected day object, or null
+  const [expandedMonths, setExpandedMonths] = useState(new Set()); // empty = all collapsed
+  const [collapsedWeeks, setCollapsedWeeks] = useState(new Set());
+
+  const toggleMonth = key => setExpandedMonths(s => { const n=new Set(s); n.has(key)?n.delete(key):n.add(key); return n; });
+  const toggleWeek  = key => setCollapsedWeeks(s => { const n=new Set(s); n.has(key)?n.delete(key):n.add(key); return n; });
+
+  const loadSchedule = () => FBUTIL.listSchedule().then(list => setFsSchedule(list));
+  useEffect(() => { loadSchedule(); }, []);
+
+  const loading  = fsSchedule === null;
+  const schedule = loading ? [] : (fsSchedule.length > 0 ? fsSchedule : HW.schedule);
+  const [filterDay, setFilterDay] = useState(null); // day object — when set, list shows only that date
+  const isAdmin = AUTH.isOperator(); // admin and supervisor can edit schedule
+
   const groups = {};
-  HW.schedule.forEach(s => {
+  schedule.forEach(s => {
     const label = HW.scheduleLabels[s.date] || s.date;
     (groups[label] = groups[label] || []).push(s);
   });
-  const days = [
-    { d:"15", w:"THU", active:true }, { d:"16", w:"FRI" }, { d:"17", w:"SAT" },
-    { d:"18", w:"SUN" }, { d:"19", w:"MON" }, { d:"20", w:"TUE" }, { d:"21", w:"WED" },
-  ];
+
+  const visibleGroups = filterDay
+    ? { [filterDay.label]: schedule.filter(s => s.date === filterDay.label) }
+    : groups;
+
+  // Rolling 7-day strip, paged a week at a time, bounded to ±6 months from today
+  const MAX_DAYS = 183;
+  const [weekOffset, setWeekOffset] = useState(0); // in units of weeks
+  const todayIso = React.useMemo(() => new Date().toISOString().slice(0,10), []);
+
+  const days = React.useMemo(() => {
+    const arr = [];
+    // Start on Sunday of the current week
+    const sun = new Date(); sun.setHours(0,0,0,0);
+    sun.setDate(sun.getDate() - sun.getDay()); // back to Sunday
+    sun.setDate(sun.getDate() + weekOffset * 7);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sun); d.setDate(sun.getDate() + i);
+      const iso = d.toISOString().slice(0,10);
+      arr.push({
+        iso,
+        label: d.toLocaleDateString("en-US", { month:"short", day:"numeric" }),
+        d:     String(d.getDate()),
+        w:     d.toLocaleDateString("en-US", { weekday:"short" }).toUpperCase(),
+        active: iso === todayIso,
+      });
+    }
+    return arr;
+  }, [weekOffset]);
+
+  const monthLabel = new Date(days[0].iso + "T00:00:00").toLocaleDateString("en-US", { month:"long", year:"numeric" });
+  const canPageBack = weekOffset * 7 > -MAX_DAYS;
+  const canPageFwd  = weekOffset * 7 < MAX_DAYS - 6;
+
+  // Color a day chip by how soon/overdue its scheduled visits are
+  const todayDate = React.useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const dayStatusColor = (day) => {
+    const items = schedule.filter(s => s.date === day.label);
+    if (items.length === 0) return null;
+    if (items.every(s => s.status === "completed")) return { bg:"#D9DADC", fg:"#5B5F66" }; // complete — light gray
+    const diffDays = Math.round((new Date(day.iso + "T00:00:00") - todayDate) / 86400000);
+    if (diffDays < 0)  return { bg:"var(--danger)", fg:"#fff" };     // overdue — red
+    if (diffDays <= 3) return { bg:"#F2994A", fg:"#fff" };           // within 3 days — orange
+    return { bg:"#F2C94C", fg:"#3A2E05" };                           // more than 3 days out — yellow
+  };
+
+  const saveItem = async (data) => {
+    const { dateIso, ...fsData } = data; // strip dateIso — not stored in Firestore
+    if (editItem) {
+      await FBUTIL.updateScheduleItem(editItem.id, fsData);
+    } else {
+      // Build all occurrences from today up to 1 year from the initial date
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const cutoff = new Date(dateIso + "T00:00:00");
+      cutoff.setFullYear(cutoff.getFullYear() + 1);
+      const allItems = [];
+      // Only include the initial date if it's today or in the future
+      if (dateIso >= todayIso) allItems.push({ status:"scheduled", ...fsData });
+      let curIso = dateIso;
+      while (true) {
+        const nextIso = nextRecurringISO(curIso, data.type);
+        if (!nextIso) break;
+        if (new Date(nextIso + "T00:00:00") > cutoff) break;
+        if (nextIso >= todayIso) {
+          allItems.push({ status:"scheduled", ...fsData, date: isoToDateLabel(nextIso) });
+        }
+        curIso = nextIso;
+      }
+      await FBUTIL.batchCreateScheduleItems(allItems);
+    }
+    await loadSchedule();
+    setAddSheet(false); setEditItem(null);
+  };
+
+  const [confirmDeleteItem, setConfirmDeleteItem] = React.useState(null);
+
+  const deleteItem = (item) => {
+    // item may be passed as a full object (from ScheduleRow/DaySheet) or just an id string
+    if (typeof item === "string" || typeof item === "number") {
+      // legacy: id only — no series prompt, just delete
+      FBUTIL.deleteScheduleItem(item).then(loadSchedule);
+    } else {
+      setConfirmDeleteItem(item);
+    }
+  };
+
+  const confirmDeleteSingle = async () => {
+    await FBUTIL.deleteScheduleItem(confirmDeleteItem.id);
+    setConfirmDeleteItem(null);
+    await loadSchedule();
+  };
+
+  const confirmDeleteUpcoming = async () => {
+    await FBUTIL.deleteScheduleItemsUpcoming(confirmDeleteItem);
+    setConfirmDeleteItem(null);
+    await loadSchedule();
+  };
+
   return (
     <div className="hw-scroll">
-      <AppHeader title="Schedule" sub="This week · 5 visits" />
+      <AppHeader title="Schedule" sub={`This week · ${schedule.length} visits`} onBack={canGoBack ? nav.back : null}
+        right={isAdmin && (
+          <button onClick={() => setAddSheet(true)}
+            style={{ width:34, height:34, borderRadius:999, border:"none", background:"var(--pine)",
+              color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+            <Icon name="plus" size={19} color="#fff" />
+          </button>
+        )} />
       {/* week strip */}
-      <div className="hscroll" style={{ padding:"2px 20px 6px" }}>
-        {days.map(day => (
-          <div key={day.d} style={{ flexShrink:0, width:46, textAlign:"center", padding:"9px 0", borderRadius:14, cursor:"pointer",
-            background: day.active ? "var(--pine)" : "var(--surface)", color: day.active ? "var(--on-pine)" : "var(--ink)",
-            boxShadow: day.active ? "none" : "var(--shadow-sm)" }}>
-            <div style={{ fontSize:10.5, fontWeight:700, opacity:0.7, letterSpacing:0.06 }}>{day.w}</div>
-            <div className="tnum" style={{ fontSize:18, fontWeight:800, marginTop:2 }}>{day.d}</div>
-          </div>
-        ))}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"2px 20px 8px" }}>
+        <button onClick={() => canPageBack && setWeekOffset(w => w - 1)} disabled={!canPageBack}
+          style={{ width:30, height:30, borderRadius:999, border:"none", background:"transparent",
+            cursor: canPageBack ? "pointer" : "default", opacity: canPageBack ? 1 : 0.3,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Icon name="chevron-left" size={18} color="var(--ink-2)" />
+        </button>
+        <span style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)" }}>{monthLabel}</span>
+        <button onClick={() => canPageFwd && setWeekOffset(w => w + 1)} disabled={!canPageFwd}
+          style={{ width:30, height:30, borderRadius:999, border:"none", background:"transparent",
+            cursor: canPageFwd ? "pointer" : "default", opacity: canPageFwd ? 1 : 0.3,
+            display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Icon name="chevron-right" size={18} color="var(--ink-2)" />
+        </button>
       </div>
-      {Object.entries(groups).map(([label, items], gi) => (
-        <div key={label}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"20px 20px 11px" }}>
-            <h2 style={{ margin:0, fontSize:15, fontWeight:800, letterSpacing:-0.2 }}>{label}</h2>
-            <div style={{ flex:1, height:1, background:"var(--line)" }} />
-            <span style={{ fontSize:12.5, color:"var(--ink-3)", fontWeight:700 }}>{items.length} {items.length>1?"visits":"visit"}</span>
-          </div>
-          <div style={{ padding:"0 20px", display:"flex", flexDirection:"column", gap:10 }}>
-            {items.map((s,i) => <ScheduleRow key={s.id} item={s} nav={nav} delay={0.04*i} />)}
+      <div style={{ display:"flex", justifyContent:"center", padding:"2px 20px 6px", gap:8 }}>
+        {days.map(day => {
+          const statusColor = dayStatusColor(day);
+          const bg = statusColor ? statusColor.bg : (day.active ? "var(--pine)" : "var(--surface)");
+          const fg = statusColor ? statusColor.fg : (day.active ? "var(--on-pine)" : "var(--ink)");
+          return (
+            <button key={day.iso} onClick={() => setDaySheet(day)} className="tap"
+              style={{ flexShrink:0, width:46, textAlign:"center", padding:"9px 0", borderRadius:14,
+                border: day.active ? "2px solid var(--pine)" : "none", cursor:"pointer", fontFamily:"var(--sans)",
+                background:bg, color:fg,
+                boxShadow: (statusColor || day.active) ? "none" : "var(--shadow-sm)" }}>
+              <div style={{ fontSize:10.5, fontWeight:700, opacity:0.7, letterSpacing:0.06 }}>{day.w}</div>
+              <div className="tnum" style={{ fontSize:18, fontWeight:800, marginTop:2 }}>{day.d}</div>
+            </button>
+          );
+        })}
+      </div>
+      {loading && (
+        <div style={{ textAlign:"center", padding:"30px 0", color:"var(--ink-3)" }}>Loading…</div>
+      )}
+
+      {filterDay && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 20px 0" }}>
+          <span className="pill pill-muted" style={{ fontSize:12 }}>
+            Showing {filterDay.w}, {filterDay.label}
+          </span>
+          <button onClick={() => setFilterDay(null)}
+            style={{ border:"none", background:"none", cursor:"pointer", padding:2,
+              display:"flex", alignItems:"center", color:"var(--ink-3)", fontSize:12, fontWeight:700,
+              fontFamily:"var(--sans)", gap:3 }}>
+            <Icon name="x" size={13} /> Clear
+          </button>
+        </div>
+      )}
+
+      {(() => {
+        // Detect conflicts: items sharing the same date + time
+        const slotCounts = {};
+        schedule.forEach(s => {
+          if (s.date && s.time) {
+            const key = `${s.date}|${s.time}`;
+            slotCounts[key] = (slotCounts[key] || 0) + 1;
+          }
+        });
+        const conflictIds = new Set(
+          schedule.filter(s => s.date && s.time && slotCounts[`${s.date}|${s.time}`] > 1).map(s => s.id)
+        );
+
+        // When a day filter is active, show flat list for that day only
+        if (filterDay) {
+          const items = schedule.filter(s => s.date === filterDay.label);
+          return (
+            <div style={{ padding:"0 20px", display:"flex", flexDirection:"column", gap:10, marginTop:10 }}>
+              {items.length === 0
+                ? <div style={{ textAlign:"center", padding:"24px 0", color:"var(--ink-3)", fontSize:13.5 }}>No visits on this day.</div>
+                : items.map((s,i) => (
+                    <ScheduleRow key={s.id} item={s} nav={nav} delay={0}
+                      conflict={conflictIds.has(s.id)}
+                      onEdit={isAdmin ? () => setEditItem(s) : null}
+                      onDelete={isAdmin ? () => deleteItem(s) : null} />
+                  ))}
+            </div>
+          );
+        }
+
+        // Build month → week → items hierarchy
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const monthMap = {};
+        schedule.filter(s => {
+          const d = parseDateLabel(s.date);
+          if (!d) return false;
+          return d.toISOString().slice(0, 10) >= todayISO; // today and future only
+        }).forEach(s => {
+          const d = parseDateLabel(s.date);
+          if (!d) return;
+          const mKey  = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
+          const mLbl  = d.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+          const wDate = weekMonday(d);
+          const wKey  = wDate.toISOString().slice(0,10);
+          const wLbl  = `Week of ${wDate.toLocaleDateString('en-US', { month:'short', day:'numeric' })}`;
+          if (!monthMap[mKey]) monthMap[mKey] = { label:mLbl, weeks:{} };
+          if (!monthMap[mKey].weeks[wKey]) monthMap[mKey].weeks[wKey] = { label:wLbl, items:[] };
+          monthMap[mKey].weeks[wKey].items.push(s);
+        });
+
+        const sortedMonths = Object.entries(monthMap).sort(([a],[b]) => a.localeCompare(b));
+
+        if (sortedMonths.length === 0 && !loading) {
+          return <div style={{ textAlign:"center", padding:"40px 20px", color:"var(--ink-3)", fontSize:13.5 }}>No visits scheduled.</div>;
+        }
+
+        return sortedMonths.map(([mKey, { label:mLbl, weeks }]) => {
+          const mCollapsed = !expandedMonths.has(mKey);
+          const sortedWeeks = Object.entries(weeks).sort(([a],[b]) => a.localeCompare(b));
+          const total = sortedWeeks.reduce((n,[,w]) => n + w.items.length, 0);
+
+          return (
+            <div key={mKey} style={{ marginBottom:4 }}>
+              {/* Month header */}
+              <button onClick={() => toggleMonth(mKey)}
+                style={{ width:"100%", display:"flex", alignItems:"center", gap:10,
+                  padding:"16px 20px 10px", border:"none", background:"transparent",
+                  cursor:"pointer", textAlign:"left", fontFamily:"var(--sans)" }}>
+                <h2 style={{ margin:0, fontSize:16, fontWeight:800, letterSpacing:-0.3, color:"var(--ink)", flex:1 }}>{mLbl}</h2>
+                <span style={{ fontSize:12, fontWeight:700, color:"var(--ink-3)" }}>{total} visit{total!==1?"s":""}</span>
+                <Icon name={mCollapsed ? "chevron-right" : "chevron-down"} size={17} color="var(--ink-3)" />
+              </button>
+
+              {!mCollapsed && sortedWeeks.map(([wKey, { label:wLbl, items }]) => {
+                const wCollapsed = collapsedWeeks.has(wKey);
+                return (
+                  <div key={wKey} style={{ marginBottom:2 }}>
+                    {/* Week header */}
+                    <button onClick={() => toggleWeek(wKey)}
+                      style={{ width:"100%", display:"flex", alignItems:"center", gap:8,
+                        padding:"7px 20px 7px 32px", border:"none", background:"var(--bg-2)",
+                        cursor:"pointer", textAlign:"left", fontFamily:"var(--sans)" }}>
+                      <Icon name="calendar-week" size={14} color="var(--ink-3)" />
+                      <span style={{ flex:1, fontSize:13, fontWeight:700, color:"var(--ink-2)" }}>{wLbl}</span>
+                      <span style={{ fontSize:11.5, fontWeight:700, color:"var(--ink-3)" }}>{items.length} visit{items.length!==1?"s":""}</span>
+                      <Icon name={wCollapsed ? "chevron-right" : "chevron-down"} size={15} color="var(--ink-3)" />
+                    </button>
+
+                    {!wCollapsed && (
+                      <div style={{ padding:"8px 20px 10px", display:"flex", flexDirection:"column", gap:10 }}>
+                        {items.map((s,i) => (
+                          <ScheduleRow key={s.id} item={s} nav={nav} delay={0}
+                            conflict={conflictIds.has(s.id)}
+                            onEdit={isAdmin ? () => setEditItem(s) : null}
+                            onDelete={isAdmin ? () => deleteItem(s) : null} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        });
+      })()}
+      <div style={{ height:10 }} />
+
+      {daySheet && (
+        <DaySheet
+          day={daySheet}
+          items={schedule.filter(s => s.date === daySheet.label)}
+          isAdmin={isAdmin}
+          onClose={() => setDaySheet(null)}
+          onAdd={() => { setAddSheet(true); setDaySheet(null); }}
+          onEdit={(s) => { setEditItem(s); setDaySheet(null); }}
+          onDelete={deleteItem}
+          onViewItems={() => { setFilterDay(daySheet); setDaySheet(null); }}
+        />
+      )}
+
+      {(addSheet || editItem) && (
+        <ScheduleSheet
+          item={editItem}
+          defaultDate={daySheet?.iso}
+          onSave={saveItem}
+          onClose={() => { setAddSheet(false); setEditItem(null); }}
+        />
+      )}
+
+      {confirmDeleteItem && (
+        <div onClick={() => setConfirmDeleteItem(null)}
+          style={{ position:"fixed", inset:0, background:"rgba(15,28,63,0.38)", zIndex:120,
+            display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width:"100%", maxWidth:480, background:"var(--surface)",
+              borderRadius:"var(--r-lg) var(--r-lg) 0 0",
+              padding:"24px 20px max(32px,env(safe-area-inset-bottom))" }}>
+            <div style={{ fontSize:17, fontWeight:800, marginBottom:4 }}>Delete visit</div>
+            <div style={{ fontSize:13.5, color:"var(--ink-2)", marginBottom:20 }}>
+              {confirmDeleteItem.name} · {confirmDeleteItem.date} · {confirmDeleteItem.time}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <button onClick={confirmDeleteSingle}
+                style={{ padding:"14px 18px", borderRadius:"var(--r-sm)", border:"1.5px solid var(--danger)",
+                  background:"var(--danger-bg)", color:"var(--danger)", fontSize:15, fontWeight:700,
+                  fontFamily:"var(--sans)", cursor:"pointer", textAlign:"left" }}>
+                Delete this visit only
+              </button>
+              <button onClick={confirmDeleteUpcoming}
+                style={{ padding:"14px 18px", borderRadius:"var(--r-sm)", border:"none",
+                  background:"var(--danger)", color:"#fff", fontSize:15, fontWeight:700,
+                  fontFamily:"var(--sans)", cursor:"pointer", textAlign:"left" }}>
+                Delete all upcoming from this event
+              </button>
+              <button onClick={() => setConfirmDeleteItem(null)}
+                style={{ padding:"12px", borderRadius:"var(--r-sm)", border:"none",
+                  background:"var(--bg-2)", color:"var(--ink-2)", fontSize:14.5, fontWeight:700,
+                  fontFamily:"var(--sans)", cursor:"pointer" }}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
-      ))}
-      <div style={{ height:10 }} />
+      )}
     </div>
   );
 }
 
-Object.assign(window, { Dashboard, Properties, PropertyCard, Schedule, ScheduleRow, AlertRow });
+// Bottom sheet listing visits for a tapped calendar day, with edit/delete + add-new
+function DaySheet({ day, items, isAdmin, onClose, onAdd, onEdit, onDelete, onViewItems }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,28,63,0.35)", zIndex:99,
+      display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:480, background:"var(--surface)",
+        borderRadius:"var(--r-lg) var(--r-lg) 0 0", padding:"24px 20px max(28px,env(safe-area-inset-bottom))",
+        display:"flex", flexDirection:"column", gap:14, maxHeight:"80vh", overflowY:"auto" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:18, fontWeight:800 }}>{day.w}, {day.label}</div>
+            <div style={{ fontSize:12.5, color:"var(--ink-3)", fontWeight:600, marginTop:1 }}>
+              {items.length} visit{items.length===1?"":"s"} scheduled
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border:"none", background:"none", cursor:"pointer", padding:4 }}>
+            <Icon name="x" size={22} color="var(--ink-2)" />
+          </button>
+        </div>
+
+        {items.length === 0 && (
+          <div style={{ textAlign:"center", padding:"24px 0", color:"var(--ink-3)", fontSize:13.5 }}>
+            No visits scheduled for this day.
+          </div>
+        )}
+
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {items.map(s => (
+            <div key={s.id} className="card" style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px" }}>
+              <div style={{ width:48, flexShrink:0, textAlign:"center" }}>
+                <div className="tnum" style={{ fontSize:14, fontWeight:800 }}>{s.time.split(" ")[0]}</div>
+                <div style={{ fontSize:10.5, fontWeight:700, color:"var(--ink-3)" }}>{s.time.split(" ")[1]}</div>
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, fontSize:14.5 }}>{s.name}</div>
+                <div style={{ fontSize:12.5, color:"var(--ink-2)", marginTop:1 }}>{s.prop}</div>
+              </div>
+              {isAdmin && (
+                <div style={{ display:"flex", gap:4 }}>
+                  <button onClick={() => onEdit(s)}
+                    style={{ width:32, height:32, borderRadius:9, border:"none", background:"var(--info-bg)",
+                      color:"var(--info)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Icon name="edit" size={15} />
+                  </button>
+                  <button onClick={() => { onClose(); onDelete(s); }}
+                    style={{ width:32, height:32, borderRadius:9, border:"none", background:"var(--danger-bg)",
+                      color:"var(--danger)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Icon name="trash" size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {items.length > 0 && (
+          <button onClick={onViewItems}
+            style={{ padding:"13px", borderRadius:"var(--r-sm)", border:"1.5px solid var(--line)",
+              background:"var(--bg)", color:"var(--ink)", fontSize:14.5, fontWeight:700,
+              fontFamily:"var(--sans)", cursor:"pointer", display:"flex", alignItems:"center",
+              justifyContent:"center", gap:8 }}>
+            <Icon name="list" size={17} color="var(--ink-2)" /> View scheduled items
+          </button>
+        )}
+
+        {isAdmin && (
+          <button onClick={onAdd}
+            style={{ padding:"14px", borderRadius:"var(--r-sm)", border:"none",
+              background:"var(--pine)", color:"#fff", fontSize:15, fontWeight:800,
+              fontFamily:"var(--sans)", cursor:"pointer", display:"flex", alignItems:"center",
+              justifyContent:"center", gap:8 }}>
+            <Icon name="plus" size={18} color="#fff" /> Add visit on {day.label}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Existing schedule data stores date as a short label ("May 15") and time as a
+// 12-hour string ("9:00 AM") for display — convert to/from native input formats.
+function to24Hour(t12) {
+  const m = (t12 || "").match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!m) return "09:00";
+  let [, h, min, ap] = m;
+  h = parseInt(h, 10);
+  if (/pm/i.test(ap) && h !== 12) h += 12;
+  if (/am/i.test(ap) && h === 12) h = 0;
+  return `${String(h).padStart(2,"0")}:${min}`;
+}
+function to12Hour(t24) {
+  if (!t24) return "";
+  const [h, min] = t24.split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM";
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  return `${h12}:${String(min).padStart(2,"0")} ${ap}`;
+}
+function dateLabelToISO(label) {
+  if (!label) return "";
+  const d = new Date(`${label} ${new Date().getFullYear()}`);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0,10);
+}
+
+// Returns the next recurrence ISO date based on visit type name, or null if no pattern matches.
+// If the result lands on Sat (6) or Sun (0), advances to the following Monday.
+function nextRecurringISO(currentIso, typeName) {
+  const t = (typeName || "").toLowerCase();
+  let days = null;
+  if (/year|annual/i.test(t))      days = 365;
+  else if (/monthly|month/i.test(t)) days = 28;
+  else if (/bi.?week/i.test(t))    days = 14;
+  else if (/weekly|week/i.test(t)) days = 7;
+  if (!days || !currentIso) return null;
+  const d = new Date(currentIso + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  // Advance to Monday if weekend
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Sat → Mon
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sun → Mon
+  return d.toISOString().slice(0, 10);
+}
+function isoToDateLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+}
+
+function ScheduleSheet({ item, defaultDate, onSave, onClose }) {
+  const [fsProps, setFsProps] = useState([]);
+  useEffect(() => {
+    FBUTIL.listProperties().then(list => {
+      setFsProps(list.map(p => p.name));
+      if (!item?.prop && list.length > 0) setProp(p => p || list[0].name);
+    });
+  }, []);
+  const PROPS = fsProps;
+  const [prop,   setProp]   = useState(item?.prop   || "");
+  const [type,   setType]   = useState(item?.type   || "Weekly inspection");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const initDate = dateLabelToISO(item?.date) || defaultDate || "";
+  const [date,   setDate]   = useState(initDate >= todayStr ? initDate : (item ? initDate : todayStr));
+  const [time,   setTime]   = useState(to24Hour(item?.time));
+  const [assign, setAssign] = useState(item?.assignee || "");
+  const isEdit = !!item;
+
+  const save = () => {
+    if (!date || !prop || !type.trim()) return;
+    onSave({ prop, type: type.trim(), name: type.trim(),
+      date: isoToDateLabel(date), dateIso: date,   // keep raw ISO for recurrence math
+      time: to12Hour(time), assignee: assign,
+      desc: `${type.trim()} — ${prop}`,
+      icon: type.toLowerCase().includes("storm") ? "ti-storm" : "ti-home" });
+  };
+
+  const TYPES = ["Weekly inspection", "Bi-weekly inspection", "Monthly inspection", "Storm check", "Move-in check", "Move-out check"];
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,28,63,0.35)", zIndex:99,
+      display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+      <div style={{ width:"100%", maxWidth:480, background:"var(--surface)",
+        borderRadius:"var(--r-lg) var(--r-lg) 0 0", padding:"24px 20px 40px",
+        display:"flex", flexDirection:"column", gap:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+          <div style={{ fontSize:18, fontWeight:800 }}>{isEdit ? "Edit visit" : "Add visit"}</div>
+          <button onClick={onClose} style={{ border:"none", background:"none", cursor:"pointer", padding:4 }}>
+            <Icon name="x" size={22} color="var(--ink-2)" />
+          </button>
+        </div>
+
+        <div>
+          <div style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)", marginBottom:7 }}>Property</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+            {PROPS.map(p => (
+              <button key={p} onClick={() => setProp(p)}
+                style={{ padding:"7px 13px", borderRadius:999, border:"none", cursor:"pointer",
+                  fontSize:12.5, fontWeight:700, fontFamily:"var(--sans)",
+                  background: prop===p ? "var(--pine)" : "var(--bg-2)",
+                  color: prop===p ? "#fff" : "var(--ink-2)" }}>
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)", marginBottom:7 }}>Visit type</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:10 }}>
+            {TYPES.map(t => (
+              <button key={t} onClick={() => setType(t)}
+                style={{ padding:"7px 13px", borderRadius:999, border:"none", cursor:"pointer",
+                  fontSize:12.5, fontWeight:700, fontFamily:"var(--sans)",
+                  background: type===t ? "var(--pine)" : "var(--bg-2)",
+                  color: type===t ? "#fff" : "var(--ink-2)" }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <input type="text" value={type} placeholder="Or type a custom visit name…"
+            onChange={e => setType(e.target.value)}
+            style={{ width:"100%", padding:"11px 13px", borderRadius:"var(--r-sm)",
+              border:"1.5px solid var(--line)", fontSize:14, fontFamily:"var(--sans)",
+              background:"var(--bg)", color:"var(--ink)", outline:"none", boxSizing:"border-box" }} />
+          <div style={{ fontSize:11.5, color:"var(--ink-3)", marginTop:5 }}>
+            This becomes the visit's title on the schedule.
+          </div>
+        </div>
+
+        <div style={{ display:"flex", gap:10 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)", marginBottom:5 }}>Date</div>
+            <input type="date" value={date} min={todayStr}
+              onChange={e => setDate(e.target.value)}
+              style={{ width:"100%", padding:"11px 13px", borderRadius:"var(--r-sm)",
+                border:"1.5px solid var(--line)", fontSize:14, fontFamily:"var(--sans)",
+                background:"var(--bg)", color:"var(--ink)", outline:"none", boxSizing:"border-box" }} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)", marginBottom:5 }}>Time</div>
+            <input type="time" value={time}
+              onChange={e => setTime(e.target.value)}
+              style={{ width:"100%", padding:"11px 13px", borderRadius:"var(--r-sm)",
+                border:"1.5px solid var(--line)", fontSize:14, fontFamily:"var(--sans)",
+                background:"var(--bg)", color:"var(--ink)", outline:"none", boxSizing:"border-box" }} />
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)", marginBottom:5 }}>Assigned to (optional)</div>
+          <input type="text" value={assign} placeholder="Inspector name"
+            onChange={e => setAssign(e.target.value)}
+            style={{ width:"100%", padding:"11px 13px", borderRadius:"var(--r-sm)",
+              border:"1.5px solid var(--line)", fontSize:14, fontFamily:"var(--sans)",
+              background:"var(--bg)", color:"var(--ink)", outline:"none", boxSizing:"border-box" }} />
+        </div>
+
+        <button onClick={save} disabled={!date || !prop || !type.trim()}
+          style={{ padding:"14px", borderRadius:"var(--r-sm)", border:"none",
+            background: date && prop && type.trim() ? "var(--pine)" : "var(--bg-2)",
+            color: date && prop && type.trim() ? "#fff" : "var(--ink-3)",
+            fontSize:16, fontWeight:800, fontFamily:"var(--sans)", cursor: date && prop && type.trim() ? "pointer" : "default" }}>
+          {isEdit ? "Save changes" : "Add visit"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { Dashboard, Properties, PropertyCard, Schedule, ScheduleRow, ScheduleSheet, AlertRow });

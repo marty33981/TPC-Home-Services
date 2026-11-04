@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 const OWNER = { name:"James Anderson", first:"James", initials:"JA", base:"Chicago, IL" };
-const OPROP = HW.properties[0]; // Gulf Breeze Villa
+const OPROP = HW.properties[0] || { name:"Your Property", grad:"linear-gradient(135deg,#1B4332,#52B788)", address:"", type:"Seasonal", freq:"Weekly", id:null };
 
 // visit history (owner-facing)
 const VISITS = [
