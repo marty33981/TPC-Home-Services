@@ -48,7 +48,7 @@ const NOTAB_SCREENS = new Set([
 ]);
 
 function PreviewBanner({ role, onExit }) {
-  const labels = { operator:"Operator", homeowner:"Homewatch" };
+  const labels = { operator:"Operator", homeowner:"Homeowner" };
   return (
     <div style={{ background:"var(--pine)", color:"#fff", padding:"8px 20px",
       display:"flex", alignItems:"center", justifyContent:"space-between",

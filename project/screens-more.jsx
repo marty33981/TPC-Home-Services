@@ -1045,7 +1045,7 @@ function More({ nav, user, onLogout, canGoBack, onSwitchView, previewRole }) {
             {[
               { role:"administrator", label:"Administrator", icon:"shield-check" },
               { role:"operator",      label:"Operator",      icon:"hard-hat"     },
-              { role:"homeowner",     label:"Homewatch",     icon:"home-heart"   },
+              { role:"homeowner",     label:"Homeowner",     icon:"home-heart"   },
             ].map(opt => {
               const active = (previewRole || "administrator") === opt.role;
               return (
