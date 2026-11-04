@@ -1,7 +1,47 @@
 // TPC Home Services — Service Worker
-// Cache-first for app shell; network-first for dynamic data.
 
-const CACHE = 'tpc-homewatch-v3';
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey:            "AIzaSyBb7wJP6W2EzkpVdtkbNJdOIBYjBzPosYk",
+  authDomain:        "tpc-homewatch.firebaseapp.com",
+  projectId:         "tpc-homewatch",
+  storageBucket:     "tpc-homewatch.firebasestorage.app",
+  messagingSenderId: "603133828808",
+  appId:             "1:603133828808:web:5c5e7b6318dbe795f04ffd",
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  const title = payload.notification?.title || "New Inspection Report";
+  const body  = payload.notification?.body  || "An operator submitted a new report.";
+  const count = parseInt(payload.data?.unreadCount || "1", 10);
+  if (self.navigator?.setAppBadge) self.navigator.setAppBadge(count);
+  return self.registration.showNotification(title, {
+    body,
+    icon:      "/icons/icon-192.png",
+    badge:     "/icons/icon-96.png",
+    data:      { url: "/" },
+    tag:       "tpc-report",
+    renotify:  true,
+    vibrate:   [200, 100, 200],
+  });
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients => {
+      const existing = clients.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return self.clients.openWindow(e.notification.data?.url || "/");
+    })
+  );
+});
+
+const CACHE = 'tpc-homewatch-v4';
 
 // Derive base path from SW location so this works on any subdirectory (e.g. GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '');

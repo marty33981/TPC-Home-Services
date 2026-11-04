@@ -9,6 +9,13 @@ window.fbAuth    = firebase.auth();
 window.db        = firebase.firestore();
 window.fbStorage = firebase.storage();
 
+try {
+  window.fbMessaging = firebase.messaging();
+  fbMessaging.onMessage((payload) => {
+    window.dispatchEvent(new CustomEvent("tpc-push", { detail: payload }));
+  });
+} catch(e) { window.fbMessaging = null; }
+
 // Tie the sign-in session to the browser tab/window — closing it signs the user out,
 // NONE persistence: auth state lives only in memory — cleared on refresh or tab close.
 // Users must sign in fresh every time they open the app.
@@ -412,6 +419,29 @@ window.FBUTIL = {
     } catch {
       return [];
     }
+  },
+
+  // ── Push notifications ───────────────────────────────────────
+
+  async requestPushPermission(uid) {
+    if (!window.fbMessaging || !("Notification" in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+      const token = await fbMessaging.getToken({
+        vapidKey: "BOCfugtwxpC6QzXnirg0d4yhYINx9eT4B7KlrB2xuy98j_emztUCJztCdSzxIkrnQBawllnOPO8DUfE7wzZmPvM",
+        serviceWorkerRegistration: await navigator.serviceWorker.ready,
+      });
+      if (token && uid) await db.collection("users").doc(uid).update({ fcmToken: token });
+    } catch(e) {}
+  },
+
+  async markReportsRead(uid) {
+    await db.collection("users").doc(uid).update({ unreadReports: 0 });
+  },
+
+  async markAlertsRead(uid) {
+    await db.collection("users").doc(uid).update({ unreadAlerts: 0 });
   },
 
   // ── Bulk admin actions ──────────────────────────────────────

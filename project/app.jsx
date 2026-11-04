@@ -2,6 +2,22 @@
 // TPC Home Services — app shell + navigation (Firebase Auth)
 // ─────────────────────────────────────────────────────────────
 
+function playReportTone() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1108, 1319].forEach((freq, i) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = "sine"; osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.14;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.26, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.36);
+      osc.start(t); osc.stop(t + 0.36);
+    });
+  } catch(e) {}
+}
+
 const SCREENS = {
   dashboard:           (p) => <Dashboard {...p} />,
   properties:          (p) => <Properties {...p} />,
@@ -68,9 +84,12 @@ function PreviewBanner({ role, onExit }) {
 
 function App({ user, onLogout }) {
   const [stack,      setStack]      = useState([{ name:"dashboard", props:{} }]);
-  const [alertCount, setAlertCount] = useState(0);
-  const [viewAs,     setViewAs]     = useState(null); // null = real role
-  const depthRef = useRef(1);
+  const [alertCount,      setAlertCount]      = useState(0);
+  const [viewAs,          setViewAs]          = useState(null); // null = real role
+  const [reportCount,     setReportCount]     = useState(0);
+  const [alertBadgeCount, setAlertBadgeCount] = useState(0);
+  const depthRef    = useRef(1);
+  const prevReportRef = useRef(null);
 
   const effectiveUser = viewAs ? { ...user, role: viewAs } : user;
 
@@ -80,7 +99,30 @@ function App({ user, onLogout }) {
     }
   }, []);
 
-  useEffect(() => { refreshAlertCount(); }, []);
+  useEffect(() => {
+    refreshAlertCount();
+    if (!user?.uid) return;
+    FBUTIL.requestPushPermission(user.uid).catch(() => {});
+    const unsub = db.collection("users").doc(user.uid).onSnapshot(snap => {
+      const data    = snap.data() || {};
+      const reports = data.unreadReports || 0;
+      const alerts  = data.unreadAlerts  || 0;
+      const total   = reports + alerts;
+
+      setReportCount(reports);
+      setAlertBadgeCount(alerts);
+
+      if ("setAppBadge" in navigator) {
+        total > 0 ? navigator.setAppBadge(total) : navigator.clearAppBadge();
+      }
+
+      if (prevReportRef.current !== null && reports > prevReportRef.current) {
+        playReportTone();
+      }
+      prevReportRef.current = reports;
+    }, () => {});
+    return unsub;
+  }, [user?.uid]);
 
   const handleSwitchView = React.useCallback((role) => {
     const next = (role === user.role) ? null : role;
@@ -91,9 +133,17 @@ function App({ user, onLogout }) {
   }, [user.role]);
 
   const nav = {
-    go:   (name)           => setStack([{ name, props:{} }]),
-    push: (name, props={}) => setStack(s => [...s, { name, props }]),
-    back: ()               => setStack(s => s.length > 1 ? s.slice(0,-1) : s),
+    go: (name) => {
+      if (name === "operatorReports" && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
+      if (name === "alerts"          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+      setStack([{ name, props:{} }]);
+    },
+    push: (name, props={}) => {
+      if (name === "operatorReports" && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
+      if (name === "alerts"          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+      setStack(s => [...s, { name, props }]);
+    },
+    back: () => setStack(s => s.length > 1 ? s.slice(0,-1) : s),
   };
 
   // Homeowner preview — render OwnerApp with banner
@@ -139,13 +189,18 @@ function App({ user, onLogout }) {
         style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0 }}>
         {screenEl}
       </div>
-      {showTab && <TabBar active={activeTab} nav={nav} alertCount={alertCount} />}
+      {showTab && <TabBar active={activeTab} nav={nav} alertCount={alertCount} reportCount={reportCount} alertBadgeCount={alertBadgeCount} />}
     </div>
   );
 }
 
-function TabBar({ active, nav, alertCount = 0 }) {
-  const tabs = TABS.map(t => t.id === "alerts" ? { ...t, badge: alertCount } : t);
+function TabBar({ active, nav, alertCount = 0, reportCount = 0, alertBadgeCount = 0 }) {
+  const tabs = TABS.map(t => {
+    if (t.id === "alerts" && alertBadgeCount > 0) return { ...t, badge: alertBadgeCount };
+    if (t.id === "alerts") return { ...t, badge: alertCount };
+    if (t.id === "more"   && reportCount > 0)    return { ...t, badge: reportCount };
+    return t;
+  });
   return (
     <div style={{ position:"relative", zIndex:9, background:"rgba(252,251,247,0.92)",
       backdropFilter:"blur(18px) saturate(180%)", WebkitBackdropFilter:"blur(18px) saturate(180%)",
