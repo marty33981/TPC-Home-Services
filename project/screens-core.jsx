@@ -7,8 +7,10 @@ function InstallNudge() { return null; }
 // ── DASHBOARD ────────────────────────────────────────────────
 function Dashboard({ nav, canGoBack, user }) {
   const [activeCount, setActiveCount] = useState(HW.stats.active_properties);
+  const [fsAlerts,    setFsAlerts]    = useState(null); // null = loading
   useEffect(() => {
     FBUTIL.listProperties().then(list => { if (list.length > 0) setActiveCount(list.length); });
+    FBUTIL.getAllHomeownerAlerts().then(list => setFsAlerts(list)).catch(() => setFsAlerts([]));
   }, []);
   const urgent = null; // no hardcoded urgent banners
   const today = [];
@@ -73,7 +75,12 @@ function Dashboard({ nav, canGoBack, user }) {
       {/* recent alerts */}
       <SectionTitle action="View all" onAction={() => nav.go("alerts")}>Recent alerts</SectionTitle>
       <div style={{ padding:"0 20px 8px", display:"flex", flexDirection:"column", gap:10 }}>
-        {HW.alerts.slice(0,2).map((a,i) => <AlertRow key={a.id} a={a} nav={nav} delay={0.04*i} />)}
+        {!fsAlerts || fsAlerts.length === 0
+          ? <div style={{ textAlign:"center", padding:"18px 0 10px", color:"var(--ink-3)", fontSize:13.5, fontWeight:600 }}>
+              No alerts reported
+            </div>
+          : fsAlerts.slice(0,2).map((a,i) => <AlertRow key={a.id} a={a} nav={nav} delay={0.04*i} />)
+        }
       </div>
 
       {/* Install app nudge */}
@@ -134,20 +141,29 @@ function ScheduleRow({ item, nav, delay = 0, onEdit, onDelete, conflict = false 
   );
 }
 
-// alert row (reused)
+// alert row (reused on Dashboard) — handles both legacy (type/time/prop) and Firestore (severity/createdAt/propName) formats
 function AlertRow({ a, nav, delay = 0 }) {
-  const tone = { danger:["var(--danger)","var(--danger-bg)"], warn:["var(--warn)","var(--warn-bg)"], info:["var(--info)","var(--info-bg)"] }[a.type];
-  const pid = (HW.properties.find(p => p.name === a.prop) || {}).id;
+  const sevMap = { message:"info", caution:"warn", attention:"warn", alert:"danger" };
+  const type = a.type || sevMap[a.severity] || "info";
+  const tone = ({ danger:["var(--danger)","var(--danger-bg)"], warn:["var(--warn)","var(--warn-bg)"], info:["var(--info)","var(--info-bg)"] })[type] || ["var(--info)","var(--info-bg)"];
+  const propName = a.propName || a.prop || "";
+  const pid = (HW.properties.find(p => p.name === propName) || {}).id;
+  const iconName = a.icon ? a.icon.replace("ti-","") : (type === "danger" ? "alert-octagon" : type === "warn" ? "alert-triangle" : "bell");
+  const timeLabel = a.time
+    ? (a.time.split(" · ")[1] || a.time)
+    : a.createdAt
+      ? ((a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)).toLocaleDateString("en-US", { month:"short", day:"numeric" }))
+      : "";
   return (
     <button onClick={() => pid && nav.push("property", { id:pid })} className="card tap rise"
       style={{ display:"flex", gap:12, padding:"13px 14px", border:"none", textAlign:"left", cursor:"pointer", width:"100%", animationDelay:`${delay}s` }}>
-      <IconTile icon={a.icon.replace("ti-","")} bg={tone[1]} color={tone[0]} size={40} r={11} iconSize={20} />
+      <IconTile icon={iconName} bg={tone[1]} color={tone[0]} size={40} r={11} iconSize={20} />
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:"flex", justifyContent:"space-between", gap:8 }}>
           <span style={{ fontWeight:700, fontSize:14.5 }}>{a.title}</span>
-          <span style={{ fontSize:11.5, color:"var(--ink-3)", whiteSpace:"nowrap", fontWeight:600 }}>{a.time.split(" · ")[1] || a.time}</span>
+          <span style={{ fontSize:11.5, color:"var(--ink-3)", whiteSpace:"nowrap", fontWeight:600 }}>{timeLabel}</span>
         </div>
-        <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:3, lineHeight:1.4 }}>{a.desc}</div>
+        <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:3, lineHeight:1.4 }}>{a.message || a.desc || propName}</div>
       </div>
     </button>
   );
