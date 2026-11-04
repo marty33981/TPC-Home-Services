@@ -64,6 +64,17 @@ body {
   overflow: hidden;
 }
 
+/* full-screen mode (e.g. inspection view) */
+.hw-full {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* scroll region between header and tab bar */
 .hw-scroll {
   flex: 1;

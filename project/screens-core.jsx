@@ -2,6 +2,8 @@
 // TPC Home Services — core screens
 // ─────────────────────────────────────────────────────────────
 
+function InstallNudge() { return null; }
+
 // ── DASHBOARD ────────────────────────────────────────────────
 function Dashboard({ nav, canGoBack, user }) {
   const [activeCount, setActiveCount] = useState(HW.stats.active_properties);
