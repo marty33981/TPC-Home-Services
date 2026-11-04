@@ -4,11 +4,50 @@
 
 // ── PROPERTY DETAIL ──────────────────────────────────────────
 function PropertyDetail({ id, nav, user }) {
-  const p = HW.properties.find(x => x.id === id) || HW.properties[0];
-  const [reveal, setReveal] = useState(false);
-  const next = HW.schedule.find(s => s.prop === p.name);
+  const [p,       setP]       = useState(null);
+  const [next,    setNext]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [reveal,  setReveal]  = useState(false);
+
   const role = (user || AUTH.currentUser || {}).role || "operator";
   const canSeeAccess = role === "administrator" || role === "operator";
+
+  useEffect(() => {
+    const load = async () => {
+      let prop = id ? await FBUTIL.getProperty(String(id)) : null;
+      if (!prop) { setLoading(false); return; }
+      setP(prop);
+      // find next scheduled visit for this property
+      const sched = await FBUTIL.listSchedule();
+      const upcoming = sched.find(s => s.prop === prop.name && s.status !== "done");
+      setNext(upcoming || null);
+      setLoading(false);
+    };
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="hw-scroll" style={{ background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", minHeight:300 }}>
+        <div style={{ fontSize:13, color:"var(--ink-3)", fontWeight:600 }}>Loading…</div>
+      </div>
+    );
+  }
+
+  if (!p) {
+    return (
+      <div className="hw-scroll" style={{ background:"var(--bg)" }}>
+        <DrillHeader onBack={nav.back} title="Property" />
+        <div style={{ padding:"40px 20px", textAlign:"center", color:"var(--ink-3)", fontSize:14 }}>
+          Property not found.
+        </div>
+      </div>
+    );
+  }
+
+  // safe nested defaults
+  const owner  = p.owner  || {};
+  const access = p.access || { lockbox:"—", alarm:"—", notes:"" };
 
   return (
     <div className="hw-scroll" style={{ background:"var(--bg)" }}>
@@ -16,18 +55,18 @@ function PropertyDetail({ id, nav, user }) {
         right={<button onClick={()=>{}} style={{ width:38, height:38, borderRadius:999, border:"none", background:"var(--surface)", color:"var(--ink-2)", boxShadow:"var(--shadow-sm)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}><Icon name="dots" size={20} /></button>} />
 
       {/* gradient hero card */}
-      <div style={{ margin:"2px 20px 0", borderRadius:"var(--r-lg)", background:p.grad, color:"#fff", padding:"18px 20px 20px", position:"relative", overflow:"hidden", boxShadow:"var(--shadow)" }}>
+      <div style={{ margin:"2px 20px 0", borderRadius:"var(--r-lg)", background:p.grad||"linear-gradient(135deg,#1B4332,#52B788)", color:"#fff", padding:"18px 20px 20px", position:"relative", overflow:"hidden", boxShadow:"var(--shadow)" }}>
         <Icon name="home" size={190} style={{ position:"absolute", right:-44, top:-10, opacity:0.1 }} color="#fff" />
         <div style={{ position:"relative" }}>
-          <StatusPill status={p.status} dot={false} />
+          <StatusPill status={p.status||"active"} dot={false} />
           <h1 style={{ margin:"12px 0 0", fontSize:26, fontWeight:800, letterSpacing:-0.5, lineHeight:1.06 }}>{p.name}</h1>
           <div style={{ display:"flex", alignItems:"center", gap:7, marginTop:8, opacity:0.92, fontSize:13.5 }}>
-            <Icon name="map-pin" size={15} /><span>{p.address}</span>
+            <Icon name="map-pin" size={15} /><span>{p.address||"Address not set"}</span>
           </div>
           <div style={{ display:"flex", gap:22, marginTop:16, paddingTop:15, borderTop:"1px solid rgba(255,255,255,0.18)" }}>
-            <HeroMeta k="Type" v={p.type} />
-            <HeroMeta k="Frequency" v={p.freq} />
-            <HeroMeta k="Last visit" v={p.last} />
+            <HeroMeta k="Type"      v={p.type||"—"} />
+            <HeroMeta k="Frequency" v={p.freq||"—"} />
+            <HeroMeta k="Last visit" v={p.last||"—"} />
           </div>
         </div>
       </div>
@@ -49,57 +88,39 @@ function PropertyDetail({ id, nav, user }) {
         )}
 
         {/* primary CTA */}
-        <button className="btn btn-primary btn-block" onClick={() => nav.push("inspection", { schedId: next ? next.id : 1 })} style={{ padding:"16px", fontSize:16.5, boxShadow:"0 8px 22px rgba(27,67,50,0.26)" }}>
+        <button className="btn btn-primary btn-block" onClick={() => nav.push("inspection", { schedId: next ? next.id : null, propId: p.id })} style={{ padding:"16px", fontSize:16.5, boxShadow:"0 8px 22px rgba(27,67,50,0.26)" }}>
           <Icon name="circle-check" size={21} color="#fff" /> Start inspection
         </button>
         <div style={{ display:"flex", gap:10, marginTop:10 }}>
-          <button className="btn btn-light" style={{ flex:1, padding:"12px" }}><Icon name="phone" size={18} /> Call owner</button>
-          <button className="btn btn-light" style={{ flex:1, padding:"12px" }}><Icon name="navigation" size={18} /> Directions</button>
+          {owner.phone
+            ? <a href={`tel:${owner.phone}`} className="btn btn-light" style={{ flex:1, padding:"12px", textDecoration:"none" }}><Icon name="phone" size={18} /> Call owner</a>
+            : <button className="btn btn-light" style={{ flex:1, padding:"12px" }}><Icon name="phone" size={18} /> Call owner</button>}
+          {p.address
+            ? <a href={`https://maps.google.com/?q=${encodeURIComponent(p.address)}`} target="_blank" rel="noreferrer" className="btn btn-light" style={{ flex:1, padding:"12px", textDecoration:"none" }}><Icon name="navigation" size={18} /> Directions</a>
+            : <button className="btn btn-light" style={{ flex:1, padding:"12px" }}><Icon name="navigation" size={18} /> Directions</button>}
         </div>
 
-        {/* owner card — operators and admins only */}
-        {canSeeAccess && (
+        {/* owner card */}
+        {canSeeAccess && (owner.name || owner.phone || owner.email) && (
           <Card title="Owner" icon="user-circle">
-            <Row k={p.owner.name} v={`Home base · ${p.owner.base}`} stacked />
-            <Hr />
-            <ActionRow icon="phone" label={p.owner.phone} action="Call" tone="var(--pine-2)" />
-            <Hr />
-            <ActionRow icon="mail" label={p.owner.email} action="Email" tone="var(--pine-2)" />
+            {owner.name && <><Row k={owner.name} v={owner.base ? `Home base · ${owner.base}` : ""} stacked /><Hr /></>}
+            {owner.phone && <><ActionRow icon="phone" label={owner.phone} action="Call" tone="var(--pine-2)" /><Hr /></>}
+            {owner.email && <ActionRow icon="mail" label={owner.email} action="Email" tone="var(--pine-2)" />}
           </Card>
         )}
 
-        {/* access & codes — operators and admins only */}
+        {/* access & codes */}
         {canSeeAccess && (
-          <AccessCard prop={p} reveal={reveal} setReveal={setReveal} role={role} />
+          <AccessCard prop={{ ...p, access }} reveal={reveal} setReveal={setReveal} role={role} />
         )}
 
         {/* service / next visit */}
         <Card title="Service plan" icon="calendar-repeat">
-          <Row k="Plan" v={`${p.freq} watch`} />
+          <Row k="Plan" v={p.freq ? `${p.freq} watch` : "—"} />
           <Hr />
           <Row k="Next visit" v={next ? `${next.date} · ${next.time}` : "Not scheduled"} />
-          <Hr />
-          <div style={{ padding:"13px 0 4px" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, marginBottom:8 }}>
-              <span style={{ fontWeight:600, color:"var(--ink-2)" }}>Last inspection</span>
-              <span style={{ fontWeight:800 }}>14 / 18 complete</span>
-            </div>
-            <div className="bar"><span style={{ width:"78%" }} /></div>
-          </div>
         </Card>
 
-        {/* history */}
-        <Card title="Recent activity" icon="history">
-          <div style={{ position:"relative", paddingLeft:4 }}>
-            {HW.history.map((h,i) => <TimelineItem key={i} h={h} last={i===HW.history.length-1} />)}
-          </div>
-        </Card>
-
-        {/* photos */}
-        <SectionTitle action="View all" style={{ padding:0, margin:"22px 0 11px" }}>Latest photos</SectionTitle>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9 }}>
-          {HW.photos.map((ph,i) => <PhotoSlot key={i} ph={ph} />)}
-        </div>
         <div style={{ height:14 }} />
       </div>
     </div>
