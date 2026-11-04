@@ -99,18 +99,24 @@ function OwnerHome({ nav }) {
       {/* next visit */}
       <SectionTitle>Next visit</SectionTitle>
       <div style={{ padding:"0 20px" }}>
-        <div className="card rise" style={{ padding:"15px 16px", display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ width:54, textAlign:"center", flexShrink:0 }}>
-            <div style={{ fontSize:11, fontWeight:800, color:"var(--mint)", letterSpacing:0.04 }}>{next.month}</div>
-            <div className="tnum" style={{ fontSize:26, fontWeight:800, letterSpacing:-1, lineHeight:1 }}>{next.day}</div>
+        {next ? (
+          <div className="card rise" style={{ padding:"15px 16px", display:"flex", alignItems:"center", gap:14 }}>
+            <div style={{ width:54, textAlign:"center", flexShrink:0 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:"var(--mint)", letterSpacing:0.04 }}>{next.month}</div>
+              <div className="tnum" style={{ fontSize:26, fontWeight:800, letterSpacing:-1, lineHeight:1 }}>{next.day}</div>
+            </div>
+            <div style={{ width:1, alignSelf:"stretch", background:"var(--line)" }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:800, fontSize:15.5 }}>{next.name}</div>
+              <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2 }}>{next.time} · with Maria</div>
+            </div>
+            <Icon name="calendar-check" size={22} color="var(--mint)" />
           </div>
-          <div style={{ width:1, alignSelf:"stretch", background:"var(--line)" }} />
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:800, fontSize:15.5 }}>{next.name}</div>
-            <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:2 }}>{next.time} · with Maria</div>
+        ) : (
+          <div className="card rise" style={{ padding:"16px", textAlign:"center", color:"var(--ink-3)", fontSize:13.5, fontWeight:600 }}>
+            No upcoming visits scheduled
           </div>
-          <Icon name="calendar-check" size={22} color="var(--mint)" />
-        </div>
+        )}
       </div>
 
       {/* last report */}
