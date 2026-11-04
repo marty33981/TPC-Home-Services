@@ -37,11 +37,18 @@ function OwnerTopBar({ right }) {
 }
 
 // "your home" stylized photo placeholder w/ overlay
-function HomePhoto({ tag="Front exterior", date, height=200, r="var(--r-lg)" }) {
+function HomePhoto({ prop, tag="Front exterior", date, height=200, r="var(--r-lg)" }) {
+  const p = prop || OPROP;
   return (
-    <div style={{ position:"relative", height, borderRadius:r, overflow:"hidden", background:OPROP.grad, boxShadow:"var(--shadow)" }}>
-      <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 11px, transparent 11px, transparent 22px)" }} />
-      <Icon name="home" size={150} style={{ position:"absolute", right:-26, bottom:-26, opacity:0.16 }} color="#fff" />
+    <div style={{ position:"relative", height, borderRadius:r, overflow:"hidden",
+      background: p.photoUrl ? "#111" : (p.grad || OPROP.grad), boxShadow:"var(--shadow)" }}>
+      {p.photoUrl
+        ? <img src={p.photoUrl} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover" }} />
+        : <>
+            <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 11px, transparent 11px, transparent 22px)" }} />
+            <Icon name="home" size={150} style={{ position:"absolute", right:-26, bottom:-26, opacity:0.16 }} color="#fff" />
+          </>
+      }
       <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.42), transparent 55%)" }} />
       <div style={{ position:"absolute", left:14, top:14, display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.92)", borderRadius:999, padding:"5px 11px 5px 8px", backdropFilter:"blur(6px)" }}>
         <span style={{ width:8, height:8, borderRadius:999, background:"var(--ok)" }} />
@@ -56,8 +63,9 @@ function HomePhoto({ tag="Front exterior", date, height=200, r="var(--r-lg)" }) 
 }
 
 // ── OWNER HOME (peace of mind) ───────────────────────────────
-function OwnerHome({ nav }) {
-  const next = HW.schedule.find(s => s.prop === OPROP.name && s.status==="scheduled") || HW.schedule[4];
+function OwnerHome({ nav, prop }) {
+  const p = prop || OPROP;
+  const next = HW.schedule.find(s => s.prop === p.name && s.status==="scheduled") || HW.schedule[4];
   return (
     <div className="hw-scroll">
       <OwnerTopBar right={
@@ -76,7 +84,7 @@ function OwnerHome({ nav }) {
 
       {/* hero photo */}
       <div style={{ padding:"16px 20px 0" }} className="rise">
-        <HomePhoto tag="Front exterior" date="May 15" />
+        <HomePhoto prop={p} tag="Front exterior" date="May 15" />
       </div>
 
       {/* attention — handled item */}
@@ -149,7 +157,23 @@ function OwnerHome({ nav }) {
 }
 
 // ── OWNER VISITS ─────────────────────────────────────────────
-function OwnerVisits({ nav }) {
+function OwnerVisits({ nav, prop, reports }) {
+  const p = prop || OPROP;
+  const fmtDate = ts => ts ? (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleDateString("en-US", { month:"short", day:"numeric" }) : "—";
+  // Use real reports if available, fall back to demo VISITS
+  const visits = reports && reports.length > 0
+    ? reports.map(r => ({
+        id:       r.id,
+        date:     fmtDate(r.submittedAt || r.createdAt),
+        label:    r.visitName || "Inspection",
+        inspector:r.submittedBy || "Inspector",
+        photos:   r.photoCount || (r.photoUrls||[]).length,
+        photoUrls:r.photoUrls || [],
+        summary:  r.notes || "Inspection completed.",
+        status:   (r.flaggedCount||0) > 0 ? "flag" : "clear",
+      }))
+    : VISITS;
+
   return (
     <div className="hw-scroll">
       <OwnerTopBar />
@@ -157,14 +181,24 @@ function OwnerVisits({ nav }) {
         <div className="eyebrow" style={{ marginBottom:6 }}>Every visit, documented</div>
         <h1 style={{ margin:0, fontSize:28, fontWeight:800, letterSpacing:-0.5 }}>Visit history</h1>
       </div>
+      {visits.length === 0 && (
+        <div style={{ textAlign:"center", padding:"60px 20px", color:"var(--ink-3)" }}>
+          <Icon name="calendar-off" size={40} color="var(--ink-3)" />
+          <div style={{ marginTop:12, fontSize:15, fontWeight:600 }}>No visits on file yet</div>
+        </div>
+      )}
       <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:12 }}>
-        {VISITS.map((v,i) => {
-          const st = VSTATUS[v.status];
+        {visits.map((v,i) => {
+          const st = VSTATUS[v.status] || VSTATUS.clear;
+          const thumb = v.photoUrls?.[0];
           return (
-            <button key={v.id} onClick={()=>nav.push("report",{id:v.id})} className="card tap rise" style={{ width:"100%", border:"none", textAlign:"left", cursor:"pointer", overflow:"hidden", animationDelay:`${0.05*i}s`, padding:0 }}>
+            <button key={v.id} onClick={()=>nav.push("report",{id:v.id,report:v})} className="card tap rise" style={{ width:"100%", border:"none", textAlign:"left", cursor:"pointer", overflow:"hidden", animationDelay:`${0.05*i}s`, padding:0 }}>
               <div style={{ display:"flex", alignItems:"center", gap:13, padding:"15px 16px" }}>
-                <div style={{ width:50, height:50, borderRadius:14, background:OPROP.grad, flexShrink:0, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <Icon name="home" size={24} color="rgba(255,255,255,0.92)" />
+                <div style={{ width:50, height:50, borderRadius:14, background: thumb ? "#000" : (p.grad||OPROP.grad), flexShrink:0, position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {thumb
+                    ? <img src={thumb} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    : <Icon name="home" size={24} color="rgba(255,255,255,0.92)" />
+                  }
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -174,7 +208,7 @@ function OwnerVisits({ nav }) {
                   <div style={{ fontSize:13, color:"var(--ink-2)", marginTop:3, lineHeight:1.4 }}>{v.summary}</div>
                   <div style={{ fontSize:11.5, color:"var(--ink-3)", marginTop:5, fontWeight:600, display:"flex", gap:12 }}>
                     <span><Icon name="photo" size={12} /> {v.photos} photos</span>
-                    <span><Icon name="user" size={12} /> {v.inspector.split(" ")[0]}</span>
+                    <span><Icon name="user" size={12} /> {(v.inspector||"").split(" ")[0]}</span>
                   </div>
                 </div>
                 <Icon name="chevron-right" size={18} color="var(--ink-3)" />
@@ -188,8 +222,9 @@ function OwnerVisits({ nav }) {
 }
 
 // ── OWNER REPORT DETAIL ──────────────────────────────────────
-function OwnerReport({ id, nav }) {
-  const v = VISITS.find(x => x.id === id) || VISITS[0];
+function OwnerReport({ id, report, nav }) {
+  const fmtDate = ts => ts ? (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric" }) : "";
+  const v = report || VISITS.find(x => x.id === id) || VISITS[0];
   const groups = {};
   HW.checklist.forEach(c => { (groups[c.cat]=groups[c.cat]||[]).push(c); });
   const flaggedId = v.status === "clear" ? -1 : 5; // "No water leaks or moisture"
@@ -224,12 +259,21 @@ function OwnerReport({ id, nav }) {
         {/* photos */}
         <div className="eyebrow" style={{ marginBottom:10 }}>Photos from this visit</div>
         <div className="hscroll" style={{ marginBottom:6 }}>
-          {HW.photos.concat(HW.photos).slice(0, v.photos).map((ph,i) => (
-            <div key={i} style={{ flexShrink:0, width:130, height:96, borderRadius:14, background:OPROP.grad, position:"relative", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
-              <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 9px, transparent 9px, transparent 18px)" }} />
-              <div style={{ position:"relative", padding:"8px 10px", fontSize:10.5, fontWeight:700, color:"#fff", fontFamily:"ui-monospace,monospace", textShadow:"0 1px 2px rgba(0,0,0,0.3)" }}>{ph.tag}</div>
-            </div>
-          ))}
+          {(v.photoUrls||[]).length > 0
+            ? (v.photoUrls||[]).map((url,i) => (
+                <div key={i} style={{ flexShrink:0, width:130, height:96, borderRadius:14, overflow:"hidden" }}>
+                  <img src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                </div>
+              ))
+            : v.photos > 0
+              ? Array.from({length:v.photos}).map((_,i) => (
+                  <div key={i} style={{ flexShrink:0, width:130, height:96, borderRadius:14, background:OPROP.grad, position:"relative", overflow:"hidden", display:"flex", alignItems:"flex-end" }}>
+                    <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 9px, transparent 9px, transparent 18px)" }} />
+                    <div style={{ position:"relative", padding:"8px 10px", fontSize:10.5, fontWeight:700, color:"#fff", fontFamily:"ui-monospace,monospace" }}>Photo {i+1}</div>
+                  </div>
+                ))
+              : <div style={{ fontSize:13, color:"var(--ink-3)", padding:"10px 0" }}>No photos on file</div>
+          }
         </div>
 
         {/* checklist */}
@@ -433,14 +477,34 @@ const OWNER_TABS = [
 ];
 
 function OwnerApp({ user, onLogout }) {
-  const [stack, setStack] = useState([{ name:"home", props:{} }]);
+  const [stack,       setStack]       = useState([{ name:"home", props:{} }]);
+  const [ownerProp,   setOwnerProp]   = useState(null); // real property from Firestore
+  const [ownerReports,setOwnerReports]= useState(null); // posted reports
   const depthRef = useRef(1);
+
+  useEffect(() => {
+    if (user?.uid) {
+      FBUTIL.getPropertiesForHomeowner(user.uid)
+        .then(list => {
+          const p = list[0] || null;
+          setOwnerProp(p);
+          if (p) FBUTIL.getPostedReports(p.id).then(setOwnerReports).catch(() => setOwnerReports([]));
+          else setOwnerReports([]);
+        })
+        .catch(() => setOwnerReports([]));
+    } else {
+      setOwnerReports([]);
+    }
+  }, [user?.uid]);
+
+  const activeProp = ownerProp || OPROP;
+
   const nav = {
     go:(name)=>setStack([{name,props:{}}]),
     push:(name,props={})=>setStack(s=>[...s,{name,props}]),
     back:()=>setStack(s=>s.length>1?s.slice(0,-1):s),
     sendToAdmin:(text) => {
-      AUTH.sendToAdmins({ from: user ? user.name : OWNER.name, text, property: OPROP.name });
+      AUTH.sendToAdmins({ from: user ? user.name : OWNER.name, text, property: activeProp.name });
     },
   };
   const cur = stack[stack.length-1];
@@ -448,7 +512,11 @@ function OwnerApp({ user, onLogout }) {
   const pushed = stack.length > depthRef.current;
   depthRef.current = stack.length;
   const animClass = pushed || cur.name==="report" ? "anim-slide" : "anim-fade";
-  const screenEl = (OWNER_SCREENS[cur.name] || OWNER_SCREENS.home)({ ...cur.props, nav, user, onLogout });
+  const screenEl = (OWNER_SCREENS[cur.name] || OWNER_SCREENS.home)({
+    ...cur.props, nav, user, onLogout,
+    prop: activeProp,
+    reports: ownerReports || [],
+  });
 
   return (
     <div className="hw-app">
