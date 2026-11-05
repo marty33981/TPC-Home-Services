@@ -38,14 +38,12 @@ self.addEventListener('notificationclick', (e) => {
   );
 });
 
-const CACHE = 'tpc-homewatch-v10';
+const CACHE = 'tpc-homewatch-v11';
 
 // Derive base path so this works on any subdirectory (e.g. GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
 
 const SHELL = [
-  BASE + '/',
-  BASE + '/index.html',
   BASE + '/manifest.json',
   BASE + '/project/styles.css',
   BASE + '/project/data.js',
@@ -87,12 +85,20 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Fetch: cache-first for shell assets, network-first for everything else
+// Fetch: network-first for HTML (always fresh), cache-first for other assets
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
   // Only handle same-origin GET requests
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Always fetch HTML fresh so the SW registration URL stays current
+  if (url.pathname === BASE + '/' || url.pathname === BASE + '/index.html' || url.pathname.endsWith('/')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(BASE + '/index.html'))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then((cached) => {
@@ -104,7 +110,7 @@ self.addEventListener('fetch', (e) => {
           caches.open(CACHE).then((cache) => cache.put(e.request, clone));
         }
         return res;
-      }).catch(() => cached || new Response('Offline', { status: 503 }));
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });
