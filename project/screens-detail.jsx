@@ -2,6 +2,42 @@
 // TPC Home Services — property detail + live inspection
 // ─────────────────────────────────────────────────────────────
 
+// ── Generic action sheet (bottom sheet with icon-labeled rows) ─
+function ActionSheet({ title, actions, onClose }) {
+  return (
+    <div onClick={onClose}
+      style={{ position:"fixed", inset:0, zIndex:150, background:"rgba(15,28,63,0.35)" }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--surface)",
+          borderRadius:"20px 20px 0 0", padding:"12px 20px max(32px,env(safe-area-inset-bottom))",
+          animation:"hw-slide-up .28s cubic-bezier(.22,.61,.36,1) both" }}>
+        <div style={{ width:36, height:4, background:"var(--line)", borderRadius:999, margin:"0 auto 16px" }} />
+        {title && <div style={{ fontWeight:800, fontSize:16, marginBottom:16, paddingBottom:12, borderBottom:"1px solid var(--line)" }}>{title}</div>}
+        {actions.map((a, i) => a.sep
+          ? <div key={i} style={{ height:1, background:"var(--line)", margin:"4px 0" }} />
+          : (
+            <button key={i} onClick={() => { a.onClick?.(); onClose(); }}
+              style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"13px 4px",
+                border:"none", background:"transparent", cursor:"pointer", fontFamily:"var(--sans)",
+                textAlign:"left" }}>
+              <div style={{ width:36, height:36, borderRadius:10, flexShrink:0,
+                background: a.danger ? "var(--danger-bg)" : "var(--mint-bg)",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Icon name={a.icon} size={18} color={a.danger ? "var(--danger)" : "var(--pine)"} />
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:15, fontWeight:700, color: a.danger ? "var(--danger)" : "var(--ink)" }}>{a.label}</div>
+                {a.sub && <div style={{ fontSize:12, color:"var(--ink-3)", marginTop:1 }}>{a.sub}</div>}
+              </div>
+              {!a.danger && <Icon name="chevron-right" size={16} color="var(--ink-3)" />}
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Edit Property Info Sheet ──────────────────────────────────
 function EditPropertySheet({ prop, overrides, propId, onSave, onClose }) {
   const merged = { ...prop, ...overrides };
