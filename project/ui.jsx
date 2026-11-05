@@ -62,14 +62,14 @@ function Avatar({ size = 34 }) {
   );
 }
 
-// TPC mark — matches v2.3.9 app icon: gold arch + IPC lettermark
+// TPC mark — gold arch + TPC lettermark
 function Logo({ size = 28 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
       <rect width="100" height="100" rx="20" fill="var(--pine)"/>
       <path d="M 14,58 A 36,36 0 0,1 86,58" stroke="var(--mint)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
       <text x="50" y="80" textAnchor="middle" fill="white" fontSize="27" fontWeight="800"
-        fontFamily="Georgia, 'Times New Roman', serif" letterSpacing="-0.5">IPC</text>
+        fontFamily="Georgia, 'Times New Roman', serif" letterSpacing="-0.5">TPC</text>
       <text x="50" y="93" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="8"
         fontFamily="-apple-system, system-ui, sans-serif" letterSpacing="0.6">Home Watch</text>
     </svg>
