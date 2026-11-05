@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (e) => {
   );
 });
 
-const CACHE = 'tpc-homewatch-vendor-v1';
+const CACHE = 'tpc-homewatch-vendor-v2';
 const BASE  = self.location.pathname.replace(/\/sw\.js$/, '');
 
 // Only cache vendor files and static assets — these never change
