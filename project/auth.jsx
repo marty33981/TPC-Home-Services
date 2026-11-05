@@ -1964,4 +1964,4 @@ function InstallScreen({ onContinue }) {
   );
 }
 
-Object.assign(window, { LoginScreen, AdminUsers, AdminChecklist, AdminInbox, UserModal, AUTH, ConfirmSheet, OperatorReports, SendAlert, InstallScreen });
+Object.assign(window, { LoginScreen, AdminUsers, AdminChecklist, AdminInbox, UserModal, AUTH, ConfirmSheet, OperatorReports, SendAlert, InstallScreen, downloadReport });

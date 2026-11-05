@@ -1066,22 +1066,24 @@ function PhotoSlot({ ph }) {
 }
 
 // ── Photo gallery — date-folder view of all inspection photos ──
-function PhotoGallery({ id, name, nav, openGroupId }) {
-  const [groups,  setGroups]  = useState(null);
-  const [open,    setOpen]    = useState(() => openGroupId ? new Set([openGroupId]) : new Set());
-  const [viewer,  setViewer]  = useState(null);
+function PhotoGallery({ id, name, nav, openGroupId, user }) {
+  const [groups,        setGroups]       = useState(null);
+  const [open,          setOpen]         = useState(() => openGroupId ? new Set([openGroupId]) : new Set());
+  const [viewer,        setViewer]       = useState(null);
+  const [menuGroup,     setMenuGroup]    = useState(null);
+  const [renaming,      setRenaming]     = useState(null);
+  const [renameName,    setRenameName]   = useState('');
+  const [deletingGroup, setDeletingGroup]= useState(null);
+  const [downloading,   setDownloading]  = useState(false);
+
+  const isAdmin = (user?.role || '') === 'administrator';
 
   useEffect(() => {
     FBUTIL.getPropertyPhotos(String(id)).then(data => {
       setGroups(data);
-      // Auto-open the most recent group if none specified
-      if (!openGroupId && data && data.length > 0) {
-        setOpen(new Set([data[0].reportId]));
-      }
+      if (!openGroupId && data && data.length > 0) setOpen(new Set([data[0].reportId]));
     });
   }, [id]);
-
-  const totalGroups = (groups || []).length;
 
   const fmtDate = (ts) => {
     if (!ts) return "Unknown date";
@@ -1090,10 +1092,31 @@ function PhotoGallery({ id, name, nav, openGroupId }) {
   };
 
   const toggleGroup = (reportId) => setOpen(prev => {
-    const next = new Set(prev);
-    next.has(reportId) ? next.delete(reportId) : next.add(reportId);
-    return next;
+    const next = new Set(prev); next.has(reportId) ? next.delete(reportId) : next.add(reportId); return next;
   });
+
+  const doDelete = async (g) => {
+    await FBUTIL.deleteReport(g.reportId);
+    setGroups(gs => gs.filter(x => x.reportId !== g.reportId));
+    setDeletingGroup(null);
+  };
+
+  const doRename = async () => {
+    const n = renameName.trim(); if (!n) return;
+    await FBUTIL.renameVisit(renaming.reportId, n);
+    setGroups(gs => gs.map(x => x.reportId === renaming.reportId ? { ...x, visitName: n } : x));
+    setRenaming(null);
+  };
+
+  const doDownload = async (g) => {
+    setDownloading(true);
+    try {
+      const r = await FBUTIL.getReport(g.reportId);
+      if (r && window.downloadReport) window.downloadReport(r, (ts) => {
+        try { const d = ts?.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString(); } catch { return ''; }
+      });
+    } finally { setDownloading(false); }
+  };
 
   return (
     <div className="hw-app" style={{ background:"var(--bg)" }}>
@@ -1104,8 +1127,7 @@ function PhotoGallery({ id, name, nav, openGroupId }) {
           {groups === null && (
             <div style={{ textAlign:"center", padding:"60px 0", color:"var(--ink-3)" }}>Loading…</div>
           )}
-
-          {groups !== null && totalGroups === 0 && (
+          {groups !== null && groups.length === 0 && (
             <div style={{ textAlign:"center", padding:"60px 20px", color:"var(--ink-3)" }}>
               <div style={{ width:64, height:64, borderRadius:999, background:"var(--mint-bg)",
                 display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px" }}>
@@ -1121,33 +1143,43 @@ function PhotoGallery({ id, name, nav, openGroupId }) {
             const isLatest = idx === 0;
             return (
               <div key={g.reportId} style={{ marginBottom:10 }}>
-                {/* Date folder tile */}
-                <button onClick={() => toggleGroup(g.reportId)}
-                  style={{ width:"100%", display:"flex", alignItems:"center", gap:14,
-                    padding:"14px 16px", borderRadius: isOpen ? "var(--r) var(--r) 0 0" : "var(--r)",
-                    border:"none", cursor:"pointer", textAlign:"left", fontFamily:"var(--sans)",
-                    background:"var(--surface)", boxShadow:"var(--shadow)",
-                    borderBottom: isOpen ? "1px solid var(--line)" : "none" }}>
-                  <div style={{ width:54, height:54, borderRadius:12, flexShrink:0, overflow:"hidden",
-                    background:"var(--bg-2)", border: isLatest ? "2px solid var(--pine)" : "2px solid var(--line)" }}>
-                    <img src={g.urls[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:800, fontSize:15, color:"var(--ink)", letterSpacing:-0.2 }}>
-                      {fmtDate(g.submittedAt)}
-                      {isLatest && <span style={{ marginLeft:8, fontSize:11, fontWeight:700, padding:"2px 8px",
-                        borderRadius:999, background:"var(--pine)", color:"#fff", verticalAlign:"middle" }}>Latest</span>}
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  {/* kabob button */}
+                  <button onClick={() => setMenuGroup(menuGroup?.reportId === g.reportId ? null : g)}
+                    style={{ flexShrink:0, width:32, height:32, borderRadius:999, border:"none",
+                      background:"var(--surface)", boxShadow:"var(--shadow-sm)", cursor:"pointer",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Icon name="dots-vertical" size={18} color="var(--ink-2)" />
+                  </button>
+
+                  {/* folder row */}
+                  <button onClick={() => toggleGroup(g.reportId)}
+                    style={{ flex:1, display:"flex", alignItems:"center", gap:14,
+                      padding:"14px 16px", borderRadius: isOpen ? "var(--r) var(--r) 0 0" : "var(--r)",
+                      border:"none", cursor:"pointer", textAlign:"left", fontFamily:"var(--sans)",
+                      background:"var(--surface)", boxShadow:"var(--shadow)",
+                      borderBottom: isOpen ? "1px solid var(--line)" : "none" }}>
+                    <div style={{ width:54, height:54, borderRadius:12, flexShrink:0, overflow:"hidden",
+                      background:"var(--bg-2)", border: isLatest ? "2px solid var(--pine)" : "2px solid var(--line)" }}>
+                      <img src={g.urls[0]} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                     </div>
-                    <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:2, fontWeight:600 }}>
-                      {g.visitName} · {g.urls.length} photo{g.urls.length !== 1 ? "s" : ""} · {g.submittedBy}
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:800, fontSize:15, color:"var(--ink)", letterSpacing:-0.2 }}>
+                        {fmtDate(g.submittedAt)}
+                        {isLatest && <span style={{ marginLeft:8, fontSize:11, fontWeight:700, padding:"2px 8px",
+                          borderRadius:999, background:"var(--pine)", color:"#fff", verticalAlign:"middle" }}>Latest</span>}
+                      </div>
+                      <div style={{ fontSize:12.5, color:"var(--ink-3)", marginTop:2, fontWeight:600 }}>
+                        {g.visitName} · {g.urls.length} photo{g.urls.length !== 1 ? "s" : ""} · {g.submittedBy}
+                      </div>
                     </div>
-                  </div>
-                  <Icon name={isOpen ? "chevron-up" : "chevron-down"} size={18} color="var(--ink-3)" />
-                </button>
+                    <Icon name={isOpen ? "chevron-up" : "chevron-down"} size={18} color="var(--ink-3)" />
+                  </button>
+                </div>
 
                 {/* Expanded photo grid */}
                 {isOpen && (
-                  <div style={{ background:"var(--surface)", borderRadius:"0 0 var(--r) var(--r)",
+                  <div style={{ marginLeft:40, background:"var(--surface)", borderRadius:"0 0 var(--r) var(--r)",
                     boxShadow:"var(--shadow)", padding:"12px 12px 14px" }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
                       {g.urls.map((url, i) => (
@@ -1165,6 +1197,68 @@ function PhotoGallery({ id, name, nav, openGroupId }) {
         </div>
       </div>
 
+      {/* kabob action sheet */}
+      {menuGroup && (
+        <div onClick={() => setMenuGroup(null)}
+          style={{ position:"fixed", inset:0, zIndex:150, background:"rgba(15,28,63,0.35)" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--surface)",
+              borderRadius:"20px 20px 0 0", padding:"12px 20px max(32px,env(safe-area-inset-bottom))",
+              animation:"hw-slide-up .28s cubic-bezier(.22,.61,.36,1) both" }}>
+            <div style={{ width:36, height:4, background:"var(--line)", borderRadius:999, margin:"0 auto 18px" }} />
+            <div style={{ fontWeight:800, fontSize:16, marginBottom:4 }}>{menuGroup.visitName}</div>
+            <div style={{ fontSize:13, color:"var(--ink-3)", marginBottom:18 }}>{fmtDate(menuGroup.submittedAt)} · {menuGroup.urls.length} photos</div>
+            {[
+              { icon:"pencil",   label:"Rename",          action:() => { setRenaming(menuGroup); setRenameName(menuGroup.visitName); setMenuGroup(null); }, danger:false },
+              { icon:"download", label: downloading ? "Preparing…" : "Download report", action:() => { doDownload(menuGroup); setMenuGroup(null); }, danger:false },
+              ...(isAdmin ? [{ icon:"trash", label:"Delete", action:() => { setDeletingGroup(menuGroup); setMenuGroup(null); }, danger:true }] : []),
+            ].map(item => (
+              <button key={item.label} onClick={item.action}
+                style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 4px",
+                  border:"none", borderTop:"1px solid var(--line)", background:"transparent",
+                  cursor:"pointer", fontFamily:"var(--sans)", fontSize:16, fontWeight:600, textAlign:"left",
+                  color: item.danger ? "var(--danger)" : "var(--ink)" }}>
+                <Icon name={item.icon} size={20} color={item.danger ? "var(--danger)" : "var(--ink-2)"} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* rename sheet */}
+      {renaming && (
+        <div onClick={() => setRenaming(null)}
+          style={{ position:"fixed", inset:0, zIndex:150, background:"rgba(15,28,63,0.35)" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--surface)",
+              borderRadius:"20px 20px 0 0", padding:"24px 20px max(32px,env(safe-area-inset-bottom))",
+              animation:"hw-slide-up .28s cubic-bezier(.22,.61,.36,1) both" }}>
+            <div style={{ fontWeight:800, fontSize:17, marginBottom:16 }}>Rename visit</div>
+            <input value={renameName} onChange={e => setRenameName(e.target.value)}
+              autoFocus onKeyDown={e => e.key === 'Enter' && doRename()}
+              style={{ width:"100%", padding:"13px 15px", fontSize:15, borderRadius:"var(--r-sm)",
+                border:"1.5px solid var(--line)", background:"var(--bg)", color:"var(--ink)",
+                fontFamily:"var(--sans)", outline:"none", boxSizing:"border-box", marginBottom:14 }} />
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setRenaming(null)} className="btn btn-light" style={{ flex:1 }}>Cancel</button>
+              <button onClick={doRename} className="btn btn-primary" style={{ flex:2 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* delete confirm */}
+      {deletingGroup && (
+        <ConfirmSheet
+          message={`Delete all ${deletingGroup.urls.length} photos from "${deletingGroup.visitName}"? This cannot be undone.`}
+          confirmLabel="Yes, delete"
+          onConfirm={() => doDelete(deletingGroup)}
+          onCancel={() => setDeletingGroup(null)}
+        />
+      )}
+
+      {/* lightbox */}
       {viewer && (
         <div onClick={() => setViewer(null)}
           style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(10,14,12,0.92)",

@@ -99,6 +99,15 @@ window.FBUTIL = {
     return docs[0];
   },
 
+  async getReport(id) {
+    const snap = await db.collection('reports').doc(id).get();
+    return snap.exists ? { id: snap.id, ...snap.data() } : null;
+  },
+
+  async renameVisit(reportId, visitName) {
+    await db.collection('reports').doc(reportId).update({ visitName });
+  },
+
   async deleteReport(id) {
     await db.collection('reports').doc(id).delete();
   },
