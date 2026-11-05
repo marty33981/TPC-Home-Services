@@ -334,7 +334,7 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
     setAssigning(true);
     try {
       const chosen = (reviewers || []).filter(r => selectedIds.has(r.id));
-      await FBUTIL.assignReportToReviewers(reportId, chosen.map(r => ({ id: r.id, name: r.name || r.email || r.id, role: r.role })));
+      await FBUTIL.assignReportToReviewers(reportId, chosen.map(r => ({ id: r.id, name: r.name || r.email || r.id, role: r.role })), prop?.id);
       setAssignedSups(chosen);
       setSupSheet(false);
     } catch(e) {

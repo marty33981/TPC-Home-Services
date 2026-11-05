@@ -22,11 +22,14 @@ exports.reportCreatedTrigger = onDocumentCreated("reports/{reportId}", async (ev
   const tokens = [];
   const batch  = db.batch();
 
+  const propId = report.propId ? String(report.propId) : null;
   usersSnap.docs.forEach(doc => {
     const data = doc.data();
     if (["administrator","supervisor","operator"].includes(data.role)) {
       if (data.fcmToken) tokens.push(data.fcmToken);
-      batch.update(doc.ref, { unreadReports: FieldValue.increment(1) });
+      const upd = { unreadReports: FieldValue.increment(1) };
+      if (propId) upd.unreadReportPropIds = FieldValue.arrayUnion(propId);
+      batch.update(doc.ref, upd);
     }
   });
 

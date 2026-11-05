@@ -170,7 +170,7 @@ function AlertRow({ a, nav, delay = 0 }) {
 }
 
 // ── PROPERTIES LIST ──────────────────────────────────────────
-function Properties({ nav, canGoBack, user }) {
+function Properties({ nav, canGoBack, user, unreadPropIds = new Set() }) {
   const [filter,     setFilter]     = useState("All");
   const [fsProps,    setFsProps]    = useState(null); // null = loading
   const filters = ["All", "Needs attention", "Seasonal", "Vacant"];
@@ -222,14 +222,14 @@ function Properties({ nav, canGoBack, user }) {
       <div style={{ padding:"14px 20px 8px", display:"flex", flexDirection:"column", gap:14 }}>
         {fsProps === null
           ? <div style={{ textAlign:"center", padding:"30px 0", color:"var(--ink-3)" }}>Loading…</div>
-          : list.map((p,i) => <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} />)
+          : list.map((p,i) => <PropertyCard key={p.id} p={p} nav={nav} delay={0.05*i} hasUnread={unreadPropIds.has(String(p.id))} />)
         }
       </div>
     </div>
   );
 }
 
-function PropertyCard({ p, nav, delay = 0 }) {
+function PropertyCard({ p, nav, delay = 0, hasUnread = false }) {
   return (
     <button onClick={() => nav.push("property", { id:p.id })} className="tap rise"
       style={{ border:"none", padding:0, cursor:"pointer", textAlign:"left", borderRadius:"var(--r)", overflow:"hidden",
@@ -244,7 +244,17 @@ function PropertyCard({ p, nav, delay = 0 }) {
             <div style={{ fontSize:11.5, fontWeight:700, letterSpacing:0.08, textTransform:"uppercase", opacity:0.85 }}>{p.type}</div>
             <div style={{ fontSize:19, fontWeight:800, letterSpacing:-0.3, marginTop:3 }}>{p.name}</div>
           </div>
-          <StatusPill status={p.status} dot={false} />
+          <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+            {hasUnread && (
+              <span style={{ background:"var(--danger)", color:"#fff", fontSize:10.5, fontWeight:800,
+                borderRadius:999, minWidth:18, height:18, padding:"0 5px",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                boxShadow:"0 0 0 2px rgba(0,0,0,0.25)" }}>
+                <Icon name="file-report" size={11} color="#fff" />
+              </span>
+            )}
+            <StatusPill status={p.status} dot={false} />
+          </div>
         </div>
       </div>
       {/* body */}

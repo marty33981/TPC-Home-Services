@@ -51,7 +51,7 @@ const TABS = [
 ];
 const TAB_OF = {
   vendors:"more", adminUsers:"more", adminChecklist:"more", adminInbox:"more",
-  operatorReports:"more", sendAlert:"more", adminHub:"more", adminAdministrators:"more",
+  operatorReports:"properties", sendAlert:"more", adminHub:"more", adminAdministrators:"more",
   adminSupervisors:"more", adminOperators:"more", adminHomeowners:"more",
   adminProperties:"more", profileEdit:"more", photoGallery:"properties",
 };
@@ -83,12 +83,13 @@ function PreviewBanner({ role, onExit }) {
 }
 
 function App({ user, onLogout }) {
-  const [stack,      setStack]      = useState([{ name:"dashboard", props:{} }]);
-  const [alertCount,      setAlertCount]      = useState(0);
-  const [viewAs,          setViewAs]          = useState(null); // null = real role
-  const [reportCount,     setReportCount]     = useState(0);
-  const [alertBadgeCount, setAlertBadgeCount] = useState(0);
-  const depthRef    = useRef(1);
+  const [stack,            setStack]           = useState([{ name:"dashboard", props:{} }]);
+  const [alertCount,       setAlertCount]      = useState(0);
+  const [viewAs,           setViewAs]          = useState(null);
+  const [reportCount,      setReportCount]     = useState(0);
+  const [alertBadgeCount,  setAlertBadgeCount] = useState(0);
+  const [unreadPropIds,    setUnreadPropIds]   = useState(new Set());
+  const depthRef      = useRef(1);
   const prevReportRef = useRef(null);
 
   const effectiveUser = viewAs ? { ...user, role: viewAs } : user;
@@ -126,6 +127,7 @@ function App({ user, onLogout }) {
 
       setReportCount(reports);
       setAlertBadgeCount(alerts);
+      setUnreadPropIds(new Set((data.unreadReportPropIds || []).map(String)));
 
       // App icon badge — use optional chaining; works in Chrome/Edge/Safari PWA
       if (total > 0) { navigator.setAppBadge?.(total); }
@@ -200,6 +202,7 @@ function App({ user, onLogout }) {
     onAlertsCleared: refreshAlertCount,
     onSwitchView: handleSwitchView,
     previewRole: viewAs,
+    unreadPropIds,
   });
 
   if (isFull) {
@@ -220,9 +223,9 @@ function App({ user, onLogout }) {
 
 function TabBar({ active, nav, alertCount = 0, reportCount = 0, alertBadgeCount = 0 }) {
   const tabs = TABS.map(t => {
-    if (t.id === "alerts" && alertBadgeCount > 0) return { ...t, badge: alertBadgeCount };
-    if (t.id === "alerts") return { ...t, badge: alertCount };
-    if (t.id === "more"   && reportCount > 0)    return { ...t, badge: reportCount };
+    if (t.id === "alerts"     && alertBadgeCount > 0) return { ...t, badge: alertBadgeCount };
+    if (t.id === "alerts")                            return { ...t, badge: alertCount };
+    if (t.id === "properties" && reportCount > 0)     return { ...t, badge: reportCount };
     return t;
   });
   return (
@@ -233,11 +236,7 @@ function TabBar({ active, nav, alertCount = 0, reportCount = 0, alertBadgeCount 
       {tabs.map(t => {
         const on = active === t.id;
         return (
-          <button key={t.id} onClick={() => {
-              // Badge on More means unread reports — go straight there
-              if (t.id === "more" && reportCount > 0) { nav.go("operatorReports"); return; }
-              nav.go(t.id);
-            }} style={{ border:"none", background:"transparent",
+          <button key={t.id} onClick={() => nav.go(t.id)} style={{ border:"none", background:"transparent",
             cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3,
             padding:"2px 10px", flex:1, position:"relative" }}>
             <div style={{ position:"relative" }}>

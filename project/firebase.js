@@ -43,18 +43,18 @@ window.FBUTIL = {
       .filter(u => u.role === 'supervisor' || u.role === 'administrator');
   },
 
-  async assignReportToReviewers(reportId, reviewers) {
+  async assignReportToReviewers(reportId, reviewers, propId) {
     await db.collection('reports').doc(reportId).update({
       reviewers,
       sentToSupervisor: true,
       sentToSupervisorAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    // Increment unreadReports badge for each reviewer directly from client
+    // Increment badge and tag the property so the Homes tab badge is specific
     const batch = db.batch();
     reviewers.forEach(r => {
-      batch.update(db.collection('users').doc(r.id), {
-        unreadReports: firebase.firestore.FieldValue.increment(1),
-      });
+      const upd = { unreadReports: firebase.firestore.FieldValue.increment(1) };
+      if (propId) upd.unreadReportPropIds = firebase.firestore.FieldValue.arrayUnion(String(propId));
+      batch.update(db.collection('users').doc(r.id), upd);
     });
     await batch.commit();
   },
@@ -487,7 +487,7 @@ window.FBUTIL = {
   },
 
   async markReportsRead(uid) {
-    await db.collection("users").doc(uid).update({ unreadReports: 0 });
+    await db.collection("users").doc(uid).update({ unreadReports: 0, unreadReportPropIds: [] });
   },
 
   async markAlertsRead(uid) {
