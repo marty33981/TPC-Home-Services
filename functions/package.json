@@ -2,7 +2,7 @@
   "name": "tpc-homewatch-functions",
   "version": "1.0.0",
   "description": "Firebase Cloud Functions for TPC Home Services",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "main": "index.js",
   "dependencies": {
     "firebase-admin": "^12.0.0",
