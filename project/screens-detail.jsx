@@ -1148,8 +1148,9 @@ function PhotoGallery({ id, name, nav, openGroupId, user }) {
                   <button onClick={() => setMenuGroup(menuGroup?.reportId === g.reportId ? null : g)}
                     style={{ flexShrink:0, width:32, height:32, borderRadius:999, border:"none",
                       background:"var(--surface)", boxShadow:"var(--shadow-sm)", cursor:"pointer",
-                      display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <Icon name="dots-vertical" size={18} color="var(--ink-2)" />
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:20, fontWeight:700, color:"var(--ink-2)", letterSpacing:0 }}>
+                    ⋮
                   </button>
 
                   {/* folder row */}
