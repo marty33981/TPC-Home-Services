@@ -5,7 +5,7 @@ const { getMessaging } = require("firebase-admin/messaging");
 
 initializeApp();
 
-exports.onReportCreated = onDocumentCreated("reports/{reportId}", async (event) => {
+exports.reportCreatedTrigger = onDocumentCreated("reports/{reportId}", async (event) => {
   const report = event.data.data();
   const db = getFirestore();
   const messaging = getMessaging();
@@ -70,7 +70,7 @@ exports.onReportCreated = onDocumentCreated("reports/{reportId}", async (event) 
   return null;
 });
 
-exports.onAlertCreated = onDocumentCreated("{collection}/{alertId}", async (event) => {
+exports.alertCreatedTrigger = onDocumentCreated("{collection}/{alertId}", async (event) => {
   const col = event.params.collection;
   if (col !== "homeownerAlerts" && col !== "operatorAlerts") return null;
 
