@@ -1616,6 +1616,9 @@ function ReportPreviewSheet({ report: r, posting, fmtDate, isAdmin, isSupervisor
           </span>
           <span style={{ fontSize:12.5, fontWeight:700, color:"var(--ink-2)" }}>
             <Icon name="calendar" size={13} style={{ verticalAlign:-2, marginRight:4 }} />{r.dateStr || fmtDate(r.createdAt)}
+            {r.time && <span style={{ marginLeft:8 }}>
+              <Icon name="clock" size={13} style={{ verticalAlign:-2, marginRight:4 }} />{r.time}
+            </span>}
           </span>
         </div>
 

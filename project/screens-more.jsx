@@ -290,6 +290,7 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
         operatorName: op.name || "Operator",
         date:         new Date().toISOString().slice(0, 10),
         dateStr:      new Date().toLocaleDateString("en-US", { weekday:"long", year:"numeric", month:"long", day:"numeric" }),
+        time:         new Date().toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit", hour12:true }),
         visitName:    visitNameProp || item?.name || "",
         checkCount:   count,
         totalCount:   total,

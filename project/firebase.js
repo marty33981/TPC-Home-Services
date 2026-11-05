@@ -49,6 +49,14 @@ window.FBUTIL = {
       sentToSupervisor: true,
       sentToSupervisorAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
+    // Increment unreadReports badge for each reviewer directly from client
+    const batch = db.batch();
+    reviewers.forEach(r => {
+      batch.update(db.collection('users').doc(r.id), {
+        unreadReports: firebase.firestore.FieldValue.increment(1),
+      });
+    });
+    await batch.commit();
   },
 
   async createUserProfile(uid, data) {
