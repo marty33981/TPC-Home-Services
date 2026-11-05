@@ -329,12 +329,18 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
 
   const confirmAssign = async () => {
     if (selectedIds.size === 0) return;
+    if (!reportId) { setErr("No report ID — please re-submit the inspection."); return; }
     setAssigning(true);
-    const chosen = (reviewers || []).filter(r => selectedIds.has(r.id));
-    await FBUTIL.assignReportToReviewers(reportId, chosen.map(r => ({ id: r.id, name: r.name || r.email || r.id, role: r.role })));
-    setAssignedSups(chosen);
+    try {
+      const chosen = (reviewers || []).filter(r => selectedIds.has(r.id));
+      await FBUTIL.assignReportToReviewers(reportId, chosen.map(r => ({ id: r.id, name: r.name || r.email || r.id, role: r.role })));
+      setAssignedSups(chosen);
+      setSupSheet(false);
+    } catch(e) {
+      console.error("assignReportToReviewers error:", e);
+      setErr("Failed to send: " + (e?.message || e?.code || String(e)));
+    }
     setAssigning(false);
-    setSupSheet(false);
   };
 
   return (
