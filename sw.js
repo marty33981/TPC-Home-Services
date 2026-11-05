@@ -1,49 +1,46 @@
 // TPC Home Services — Service Worker
+// Handles caching, push notifications, and notification clicks.
+// No Firebase SDK imported here — Firebase CDN importScripts can fail and
+// prevent the entire SW from installing, leaving users on stale cached code.
 
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+self.addEventListener('push', (e) => {
+  if (!e.data) return;
+  let payload = {};
+  try { payload = e.data.json(); } catch (_) { return; }
 
-firebase.initializeApp({
-  apiKey:            "AIzaSyBb7wJP6W2EzkpVdtkbNJdOIBYjBzPosYk",
-  authDomain:        "tpc-homewatch.firebaseapp.com",
-  projectId:         "tpc-homewatch",
-  storageBucket:     "tpc-homewatch.firebasestorage.app",
-  messagingSenderId: "603133828808",
-  appId:             "1:603133828808:web:5c5e7b6318dbe795f04ffd",
-});
+  const title = payload.notification?.title || 'New Inspection Report';
+  const body  = payload.notification?.body  || 'An operator submitted a new report.';
+  const count = parseInt(payload.data?.unreadCount || '1', 10);
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "New Inspection Report";
-  const body  = payload.notification?.body  || "An operator submitted a new report.";
-  const count = parseInt(payload.data?.unreadCount || "1", 10);
   if (self.navigator?.setAppBadge) self.navigator.setAppBadge(count);
-  return self.registration.showNotification(title, {
-    body,
-    icon:      "/icons/icon-192.png",
-    badge:     "/icons/icon-96.png",
-    data:      { url: "/" },
-    tag:       "tpc-report",
-    renotify:  true,
-    vibrate:   [200, 100, 200],
-  });
-});
 
-self.addEventListener("notificationclick", (e) => {
-  e.notification.close();
   e.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(clients => {
-      const existing = clients.find(c => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
-      return self.clients.openWindow(e.notification.data?.url || "/");
+    self.registration.showNotification(title, {
+      body,
+      icon:     '/icons/icon-192.png',
+      badge:    '/icons/icon-96.png',
+      data:     { url: '/', count },
+      tag:      'tpc-report',
+      renotify: true,
+      vibrate:  [200, 100, 200],
     })
   );
 });
 
-const CACHE = 'tpc-homewatch-v4';
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      const existing = clients.find(c => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      return self.clients.openWindow(e.notification.data?.url || '/');
+    })
+  );
+});
 
-// Derive base path from SW location so this works on any subdirectory (e.g. GitHub Pages)
+const CACHE = 'tpc-homewatch-v5';
+
+// Derive base path so this works on any subdirectory (e.g. GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
 
 const SHELL = [
@@ -58,7 +55,10 @@ const SHELL = [
   BASE + '/project/screens-core.jsx',
   BASE + '/project/screens-detail.jsx',
   BASE + '/project/screens-more.jsx',
+  BASE + '/project/screens-admin.jsx',
   BASE + '/project/screens-owner.jsx',
+  BASE + '/project/auth.jsx',
+  BASE + '/project/firebase.js',
   BASE + '/project/app.jsx',
   BASE + '/vendor/react.js',
   BASE + '/vendor/react-dom.js',
