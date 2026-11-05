@@ -72,7 +72,8 @@ window.FBUTIL = {
     const ref = await db.collection('reports').add({
       ...data,
       postedToHomeowner: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+      submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
     return ref.id;
   },
@@ -87,12 +88,11 @@ window.FBUTIL = {
 
   async getLastReportForProperty(propId) {
     const snap = await db.collection('reports')
-      .where('propId', '==', propId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
+      .where('propId', '==', propId).get();
     if (snap.empty) return null;
-    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    return docs[0];
   },
 
   async deleteReport(id) {
@@ -113,30 +113,28 @@ window.FBUTIL = {
   async getPostedReports(propId) {
     const snap = await db.collection('reports')
       .where('propId', '==', propId)
-      .where('postedToHomeowner', '==', true)
-      .orderBy('createdAt', 'desc').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      .where('postedToHomeowner', '==', true).get();
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    return docs;
   },
 
   // ── Property photo gallery (sourced from inspection reports) ─
 
   async getPropertyPhotos(propId) {
     const snap = await db.collection('reports')
-      .where('propId', '==', propId)
-      .orderBy('createdAt', 'desc').limit(50).get();
-    const groups = [];
-    snap.docs.forEach(d => {
-      const r = d.data();
-      if (r.photoUrls && r.photoUrls.length > 0) {
-        groups.push({
-          reportId:    d.id,
-          visitName:   r.visitName || "Inspection",
-          submittedBy: r.submittedBy || "Operator",
-          submittedAt: r.submittedAt || null,
-          urls:        r.photoUrls,
-        });
-      }
-    });
+      .where('propId', '==', propId).get();
+    const groups = snap.docs
+      .map(d => ({ _id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+      .filter(r => r.photoUrls?.length > 0)
+      .map(r => ({
+        reportId:    r._id,
+        visitName:   r.visitName   || "Inspection",
+        submittedBy: r.submittedBy || "Operator",
+        submittedAt: r.submittedAt || r.createdAt || null,
+        urls:        r.photoUrls,
+      }));
     return groups;
   },
 

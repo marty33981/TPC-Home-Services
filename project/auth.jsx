@@ -1490,7 +1490,19 @@ function ReportPhotoGrid({ urls }) {
           </div>
         ))}
       </div>
-      <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      {lightboxUrl && (
+        <div onClick={() => setLightboxUrl(null)}
+          style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(10,14,12,0.92)",
+            display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <img src={lightboxUrl} alt="" style={{ maxWidth:"100%", maxHeight:"100%", borderRadius:10, objectFit:"contain" }} />
+          <button onClick={() => setLightboxUrl(null)}
+            style={{ position:"absolute", top:20, right:20, width:38, height:38, borderRadius:999,
+              background:"rgba(255,255,255,0.15)", border:"none", cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <Icon name="x" size={20} color="#fff" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
