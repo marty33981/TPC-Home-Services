@@ -1,7 +1,6 @@
 // TPC Home Services — Service Worker
-// Handles caching, push notifications, and notification clicks.
-// No Firebase SDK imported here — Firebase CDN importScripts can fail and
-// prevent the entire SW from installing, leaving users on stale cached code.
+// Push notifications and smart caching.
+// App code (project/) is always fetched fresh — only vendor/assets are cached.
 
 self.addEventListener('push', (e) => {
   if (!e.data) return;
@@ -38,26 +37,11 @@ self.addEventListener('notificationclick', (e) => {
   );
 });
 
-const CACHE = 'tpc-homewatch-v13';
+const CACHE = 'tpc-homewatch-vendor-v1';
+const BASE  = self.location.pathname.replace(/\/sw\.js$/, '');
 
-// Derive base path so this works on any subdirectory (e.g. GitHub Pages)
-const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
-
-const SHELL = [
-  BASE + '/manifest.json',
-  BASE + '/project/styles.css',
-  BASE + '/project/data.js',
-  BASE + '/project/ios-frame.jsx',
-  BASE + '/project/tweaks-panel.jsx',
-  BASE + '/project/ui.jsx',
-  BASE + '/project/screens-core.jsx',
-  BASE + '/project/screens-detail.jsx',
-  BASE + '/project/screens-more.jsx',
-  BASE + '/project/screens-admin.jsx',
-  BASE + '/project/screens-owner.jsx',
-  BASE + '/project/auth.jsx',
-  BASE + '/project/firebase.js',
-  BASE + '/project/app.jsx',
+// Only cache vendor files and static assets — these never change
+const VENDOR = [
   BASE + '/vendor/react.js',
   BASE + '/vendor/react-dom.js',
   BASE + '/vendor/babel.min.js',
@@ -65,49 +49,46 @@ const SHELL = [
   BASE + '/vendor/tabler-icons/fonts/tabler-icons.woff2',
   BASE + '/icons/icon-192.png',
   BASE + '/icons/icon-512.png',
+  BASE + '/project/styles.css',
 ];
 
-// Install: pre-cache the app shell
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL))
-  );
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(VENDOR)));
   self.skipWaiting();
 });
 
-// Activate: remove old caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// Fetch: network-first for HTML (always fresh), cache-first for other assets
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-
-  // Only handle same-origin GET requests
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Always fetch HTML fresh so the SW registration URL stays current
-  if (url.pathname === BASE + '/' || url.pathname === BASE + '/index.html' || url.pathname.endsWith('/')) {
+  const path = url.pathname;
+
+  // App code and HTML — always network-first (never stale)
+  if (path.startsWith(BASE + '/project/') || path === BASE + '/' ||
+      path === BASE + '/index.html' || path.endsWith('/')) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(BASE + '/index.html'))
+      fetch(e.request).catch(() => caches.match(e.request))
     );
     return;
   }
 
+  // Vendor / static assets — cache-first
   e.respondWith(
-    caches.match(e.request).then((cached) => {
+    caches.match(e.request).then(cached => {
       if (cached) return cached;
-
-      return fetch(e.request).then((res) => {
+      return fetch(e.request).then(res => {
         if (res.ok) {
           const clone = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+          caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
       }).catch(() => new Response('Offline', { status: 503 }));
