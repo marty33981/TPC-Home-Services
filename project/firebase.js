@@ -90,7 +90,11 @@ window.FBUTIL = {
     const snap = await db.collection('reports')
       .where('propId', '==', propId).get();
     if (snap.empty) return null;
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const MIN_MS = new Date('2020-01-01').getTime();
+    const docs = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => (r.createdAt?.toMillis?.() ?? 0) > MIN_MS);
+    if (!docs.length) return null;
     docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
     return docs[0];
   },
@@ -114,7 +118,10 @@ window.FBUTIL = {
     const snap = await db.collection('reports')
       .where('propId', '==', propId)
       .where('postedToHomeowner', '==', true).get();
-    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const MIN_MS = new Date('2020-01-01').getTime();
+    const docs = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => (r.createdAt?.toMillis?.() ?? 0) > MIN_MS);
     docs.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
     return docs;
   },
@@ -124,10 +131,14 @@ window.FBUTIL = {
   async getPropertyPhotos(propId) {
     const snap = await db.collection('reports')
       .where('propId', '==', propId).get();
+    const MIN_MS = new Date('2020-01-01').getTime();
     const groups = snap.docs
       .map(d => ({ _id: d.id, ...d.data() }))
+      .filter(r => {
+        const ms = r.createdAt?.toMillis?.() ?? 0;
+        return r.photoUrls?.length > 0 && ms > MIN_MS;
+      })
       .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
-      .filter(r => r.photoUrls?.length > 0)
       .map(r => ({
         reportId:    r._id,
         visitName:   r.visitName   || "Inspection",
