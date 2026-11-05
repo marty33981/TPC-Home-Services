@@ -255,9 +255,14 @@ function Ring({ pct }) {
 }
 
 function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedItems, flaggedItems, notes, photoFiles, nav, visitName: visitNameProp }) {
-  const [uploading, setUploading] = useState(false);
-  const [uploaded,  setUploaded]  = useState(false);
-  const [err,       setErr]       = useState("");
+  const [uploading,       setUploading]       = useState(false);
+  const [uploaded,        setUploaded]        = useState(false);
+  const [reportId,        setReportId]        = useState(null);
+  const [err,             setErr]             = useState("");
+  const [supSheet,        setSupSheet]        = useState(false);
+  const [supervisors,     setSupervisors]     = useState(null);
+  const [assignedSup,     setAssignedSup]     = useState(null);
+  const [assigning,       setAssigning]       = useState(false);
 
   const submit = async () => {
     setUploading(true); setErr("");
@@ -267,7 +272,7 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
         photoUrls = await FBUTIL.uploadInspectionPhotos(String(prop.id || prop.name), photoFiles);
       }
       const op = AUTH.currentUser || {};
-      await FBUTIL.submitReport({
+      const id = await FBUTIL.submitReport({
         propId:       String(prop.id || prop.name),
         propName:     prop.name,
         address:      prop.address || "",
@@ -286,12 +291,29 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
         photoUrls,
         photoCount: photoFiles ? photoFiles.length : 0,
       });
+      setReportId(id);
       setUploaded(true);
     } catch(e) {
       console.error("Submit error:", e);
       setErr("Submit failed: " + (e?.message || e?.code || String(e)));
     }
     setUploading(false);
+  };
+
+  const openSupSheet = async () => {
+    setSupSheet(true);
+    if (!supervisors) {
+      const list = await FBUTIL.getSupervisors();
+      setSupervisors(list);
+    }
+  };
+
+  const assignSupervisor = async (sup) => {
+    setAssigning(true);
+    await FBUTIL.assignReportToSupervisor(reportId, sup.id, sup.name || sup.email || sup.id);
+    setAssignedSup(sup);
+    setAssigning(false);
+    setSupSheet(false);
   };
 
   return (
@@ -320,13 +342,66 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
               : <><Icon name="send" size={18} color="#fff" /> Send inspection report</>}
           </button>
         ) : (
-          <button className="btn btn-primary btn-block" onClick={nav.back} style={{ padding:"16px", fontSize:16 }}>
-            <Icon name="home" size={18} color="#fff" /> Back to dashboard
-          </button>
+          <>
+            {assignedSup ? (
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"13px 16px", borderRadius:"var(--r-sm)",
+                background:"var(--mint-bg)", border:"1px solid rgba(52,168,83,0.2)", marginBottom:10 }}>
+                <Icon name="circle-check" size={18} color="var(--pine)" />
+                <span style={{ fontSize:14, fontWeight:700, color:"var(--pine)" }}>
+                  Sent to {assignedSup.name || assignedSup.email}
+                </span>
+              </div>
+            ) : (
+              <button className="btn btn-light btn-block" onClick={openSupSheet}
+                style={{ padding:"14px", fontSize:15, marginBottom:10, fontWeight:700 }}>
+                <Icon name="user-share" size={18} color="var(--pine)" /> Send to Supervisor
+              </button>
+            )}
+            <button className="btn btn-primary btn-block" onClick={nav.back} style={{ padding:"16px", fontSize:16 }}>
+              <Icon name="home" size={18} color="#fff" /> Back to dashboard
+            </button>
+          </>
         )}
         {notes ? <div style={{ margin:"12px 0 0", background:"var(--surface-2)", borderRadius:"var(--r-sm)", padding:"10px 13px", fontSize:13, color:"var(--ink-2)", lineHeight:1.5 }}><span style={{ fontWeight:700, color:"var(--ink)" }}>Notes: </span>{notes}</div> : null}
         {!uploaded && <button className="btn btn-ghost btn-block" onClick={nav.back} style={{ padding:"12px", marginTop:6, fontSize:15 }}>Cancel</button>}
       </div>
+
+      {/* Supervisor picker sheet */}
+      {supSheet && (
+        <div onClick={() => setSupSheet(false)}
+          style={{ position:"fixed", inset:0, zIndex:50, background:"rgba(15,28,63,0.35)" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--surface)",
+              borderRadius:"20px 20px 0 0", padding:"12px 20px max(32px,env(safe-area-inset-bottom))",
+              animation:"hw-slide-up .28s cubic-bezier(.22,.61,.36,1) both" }}>
+            <div style={{ width:36, height:4, background:"var(--line)", borderRadius:999, margin:"0 auto 16px" }} />
+            <div style={{ fontWeight:800, fontSize:17, marginBottom:4 }}>Send to Supervisor</div>
+            <div style={{ fontSize:13, color:"var(--ink-3)", marginBottom:16 }}>Select who should review this report</div>
+            {!supervisors && <div style={{ padding:"20px 0", textAlign:"center", color:"var(--ink-3)" }}>Loading…</div>}
+            {supervisors && supervisors.length === 0 && (
+              <div style={{ padding:"20px 0", textAlign:"center", color:"var(--ink-3)", fontSize:14 }}>
+                No supervisors found. Add a supervisor account in User Management.
+              </div>
+            )}
+            {(supervisors || []).map(sup => (
+              <button key={sup.id} onClick={() => assignSupervisor(sup)} disabled={assigning}
+                style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"13px 4px",
+                  border:"none", borderTop:"1px solid var(--line)", background:"transparent",
+                  cursor:"pointer", fontFamily:"var(--sans)", textAlign:"left", opacity: assigning ? 0.6 : 1 }}>
+                <div style={{ width:40, height:40, borderRadius:999, background:"var(--pine)", color:"#fff",
+                  display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:15, flexShrink:0 }}>
+                  {(sup.name || sup.email || "?")[0].toUpperCase()}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:"var(--ink)" }}>{sup.name || sup.email}</div>
+                  {sup.name && sup.email && <div style={{ fontSize:12, color:"var(--ink-3)" }}>{sup.email}</div>}
+                </div>
+                <Icon name="chevron-right" size={16} color="var(--ink-3)" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

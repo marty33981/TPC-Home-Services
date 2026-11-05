@@ -36,6 +36,20 @@ window.FBUTIL = {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   },
 
+  async getSupervisors() {
+    const snap = await db.collection('users').where('role', '==', 'supervisor').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async assignReportToSupervisor(reportId, supervisorId, supervisorName) {
+    await db.collection('reports').doc(reportId).update({
+      supervisorId,
+      supervisorName,
+      sentToSupervisor: true,
+      sentToSupervisorAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  },
+
   async createUserProfile(uid, data) {
     await db.collection('users').doc(uid).set({
       ...data,
