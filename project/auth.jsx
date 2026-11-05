@@ -1336,7 +1336,11 @@ function OperatorReports({ nav, canGoBack, user }) {
     setReports(await FBUTIL.getReports(isSupervisor ? { excludeDismissed: true } : {}));
     setLoading(false);
   };
-  React.useEffect(() => { load(); }, []);
+  React.useEffect(() => {
+    load();
+    const uid = (user || AUTH.currentUser)?.uid;
+    if (uid) FBUTIL.markReportsRead(uid).catch(() => {});
+  }, []);
 
   const postToHomeowner = async (r) => {
     setPosting(r.id);

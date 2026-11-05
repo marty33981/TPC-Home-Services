@@ -134,18 +134,16 @@ exports.reportAssignedTrigger = onDocumentUpdated("reports/{reportId}", async (e
   const operatorName = after.operatorName || "Operator";
   const visitName    = after.visitName    || "inspection";
 
+  // Client already incremented unreadReports synchronously; only collect tokens here
   const tokens = [];
-  const batch  = db.batch();
 
   for (const reviewer of reviewers) {
     const userDoc = await db.collection("users").doc(reviewer.id).get();
     if (!userDoc.exists) continue;
     const data = userDoc.data();
     if (data.fcmToken) tokens.push(data.fcmToken);
-    batch.update(userDoc.ref, { unreadReports: FieldValue.increment(1) });
   }
 
-  await batch.commit();
   if (tokens.length === 0) return null;
 
   await messaging.sendEachForMulticast({
