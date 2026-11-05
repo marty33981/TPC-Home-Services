@@ -331,12 +331,12 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
   const confirmAssign = async () => {
     if (selectedIds.size === 0) return;
     if (!reportId) { setErr("No report ID — please re-submit the inspection."); return; }
+    const chosen = (reviewers || []).filter(r => selectedIds.has(r.id));
+    setSupSheet(false);   // close sheet immediately so feedback is visible
     setAssigning(true);
     try {
-      const chosen = (reviewers || []).filter(r => selectedIds.has(r.id));
       await FBUTIL.assignReportToReviewers(reportId, chosen.map(r => ({ id: r.id, name: r.name || r.email || r.id, role: r.role })), prop?.id);
       setAssignedSups(chosen);
-      setSupSheet(false);
     } catch(e) {
       console.error("assignReportToReviewers error:", e);
       setErr("Failed to send: " + (e?.message || e?.code || String(e)));
@@ -385,6 +385,12 @@ function CompleteSheet({ item, prop, count, total, flagged, allItems, checkedIte
                     {r.name || r.email} <span style={{ opacity:0.6, fontSize:11 }}>({r.role})</span>
                   </div>
                 ))}
+              </div>
+            ) : assigning ? (
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px",
+                borderRadius:"var(--r-sm)", background:"var(--surface-2)", marginBottom:10,
+                fontSize:14, color:"var(--ink-2)", fontWeight:600 }}>
+                <Icon name="loader" size={18} color="var(--ink-3)" /> Sending report…
               </div>
             ) : (
               <button className="btn btn-light btn-block" onClick={openSupSheet}
