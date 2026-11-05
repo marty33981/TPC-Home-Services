@@ -72,10 +72,25 @@
   <script src="project/firebase.js"></script>
 
   <script>
+    const APP_VERSION = 'v11';
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=11');
-      });
+      // If version changed, purge all old SWs and caches then hard-reload once
+      const lastVersion = localStorage.getItem('app-cache-version');
+      if (lastVersion !== APP_VERSION) {
+        Promise.all([
+          navigator.serviceWorker.getRegistrations().then(regs =>
+            Promise.all(regs.map(r => r.unregister()))
+          ),
+          caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+        ]).then(() => {
+          localStorage.setItem('app-cache-version', APP_VERSION);
+          location.reload(true);
+        });
+      } else {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js?v=11');
+        });
+      }
     }
   </script>
 
