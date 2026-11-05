@@ -2,6 +2,15 @@
 // TPC Home Services — inspection, alerts, vendors, more
 // ─────────────────────────────────────────────────────────────
 
+function daysUntilPasswordExpiry(user) {
+  if (!user?.passwordChangedAt) return null;
+  const changed = new Date(user.passwordChangedAt);
+  if (isNaN(changed)) return null;
+  const expires = new Date(changed);
+  expires.setDate(expires.getDate() + 90);
+  return Math.ceil((expires - Date.now()) / 86400000);
+}
+
 // ── LIVE INSPECTION ──────────────────────────────────────────
 function Inspection({ propId, schedId, nav, user, visitName: visitNameProp, checklistItems: checklistItemsProp }) {
   const [prop,       setProp]      = useState(null);
