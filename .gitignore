@@ -1,0 +1,17 @@
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+chats/
+project/screenshots/
+project/uploads/
