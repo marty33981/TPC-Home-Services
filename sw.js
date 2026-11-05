@@ -38,7 +38,7 @@ self.addEventListener('notificationclick', (e) => {
   );
 });
 
-const CACHE = 'tpc-homewatch-v9';
+const CACHE = 'tpc-homewatch-v10';
 
 // Derive base path so this works on any subdirectory (e.g. GitHub Pages)
 const BASE = self.location.pathname.replace(/\/sw\.js$/, '');
