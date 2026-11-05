@@ -62,16 +62,16 @@ function Avatar({ size = 34 }) {
   );
 }
 
-// TPC mark — gold arch + building/house silhouette
+// TPC mark — matches v2.3.9 app icon: gold arch + IPC lettermark
 function Logo({ size = 28 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <rect width="100" height="100" rx="22" fill="var(--pine)"/>
-      <path d="M 10,70 A 40,40 0 0,1 90,70" stroke="var(--mint)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-      <polyline points="28,70 28,42 32,42 32,28 44,28 44,42 48,42 48,70" fill="none" stroke="var(--on-pine)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/>
-      <line x1="38" y1="28" x2="38" y2="42" stroke="var(--on-pine)" strokeWidth="3" strokeLinecap="round"/>
-      <polyline points="44,70 44,54 56,42 68,54 68,70" fill="none" stroke="var(--on-pine)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/>
-      <line x1="64" y1="47" x2="64" y2="42" stroke="var(--on-pine)" strokeWidth="3" strokeLinecap="round"/>
+      <rect width="100" height="100" rx="20" fill="var(--pine)"/>
+      <path d="M 14,58 A 36,36 0 0,1 86,58" stroke="var(--mint)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+      <text x="50" y="80" textAnchor="middle" fill="white" fontSize="27" fontWeight="800"
+        fontFamily="Georgia, 'Times New Roman', serif" letterSpacing="-0.5">IPC</text>
+      <text x="50" y="93" textAnchor="middle" fill="rgba(255,255,255,0.75)" fontSize="8"
+        fontFamily="-apple-system, system-ui, sans-serif" letterSpacing="0.6">Home Watch</text>
     </svg>
   );
 }
