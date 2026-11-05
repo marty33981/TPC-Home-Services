@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
@@ -108,6 +108,55 @@ exports.alertCreatedTrigger = onDocumentCreated("{collection}/{alertId}", async 
         badge:   "/icons/icon-96.png",
         vibrate: [200, 100, 200],
       },
+      fcmOptions: { link: "/" },
+    },
+    apns: { payload: { aps: { sound: "default" } } },
+  });
+
+  return null;
+});
+
+// Fires when a report is assigned to specific reviewers
+exports.reportAssignedTrigger = onDocumentUpdated("reports/{reportId}", async (event) => {
+  const before = event.data.before.data();
+  const after  = event.data.after.data();
+
+  // Only run when sentToSupervisor flips to true
+  if (before.sentToSupervisor || !after.sentToSupervisor) return null;
+
+  const reviewers = after.reviewers || [];
+  if (reviewers.length === 0) return null;
+
+  const db        = getFirestore();
+  const messaging = getMessaging();
+
+  const propName     = after.propName     || "property";
+  const operatorName = after.operatorName || "Operator";
+  const visitName    = after.visitName    || "inspection";
+
+  const tokens = [];
+  const batch  = db.batch();
+
+  for (const reviewer of reviewers) {
+    const userDoc = await db.collection("users").doc(reviewer.id).get();
+    if (!userDoc.exists) continue;
+    const data = userDoc.data();
+    if (data.fcmToken) tokens.push(data.fcmToken);
+    batch.update(userDoc.ref, { unreadReports: FieldValue.increment(1) });
+  }
+
+  await batch.commit();
+  if (tokens.length === 0) return null;
+
+  await messaging.sendEachForMulticast({
+    notification: {
+      title: `Report assigned — ${propName}`,
+      body:  `${operatorName} sent you the ${visitName} report.`,
+    },
+    data: { type: "report_assigned", propName },
+    tokens,
+    webpush: {
+      notification: { icon: "/icons/icon-192.png", badge: "/icons/icon-96.png" },
       fcmOptions: { link: "/" },
     },
     apns: { payload: { aps: { sound: "default" } } },
