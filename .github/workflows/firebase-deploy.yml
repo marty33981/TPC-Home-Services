@@ -24,10 +24,5 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Write service account
-        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
-
       - name: Deploy hosting + functions + indexes
-        run: firebase deploy --only hosting,functions,firestore:indexes
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+        run: firebase deploy --only hosting,functions,firestore:indexes --token "${{ secrets.FIREBASE_TOKEN }}"
