@@ -99,13 +99,15 @@ function App({ user, onLogout }) {
     }
   }, []);
 
-  // Navigate to reports when notification is tapped while app is open
+  // Navigate when notification is tapped while app is open (SW postMessage)
   useEffect(() => {
     const onMsg = (e) => {
       if (e.data?.type === 'navigate' && e.data.screen) {
-        setStack([{ name: e.data.screen, props: {} }]);
-        if (e.data.screen === 'operatorReports' && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
-        if (e.data.screen === 'alerts'          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+        const s = e.data.screen;
+        setStack([{ name: s, props: {} }]);
+        navigator.clearAppBadge?.();
+        if (s === 'operatorReports' && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
+        if (s === 'alerts'          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
       }
     };
     navigator.serviceWorker?.addEventListener('message', onMsg);
@@ -125,9 +127,9 @@ function App({ user, onLogout }) {
       setReportCount(reports);
       setAlertBadgeCount(alerts);
 
-      if ("setAppBadge" in navigator) {
-        total > 0 ? navigator.setAppBadge(total) : navigator.clearAppBadge();
-      }
+      // App icon badge — use optional chaining; works in Chrome/Edge/Safari PWA
+      if (total > 0) { navigator.setAppBadge?.(total); }
+      else           { navigator.clearAppBadge?.();    }
 
       if (prevReportRef.current !== null && reports > prevReportRef.current) {
         playReportTone();
@@ -145,15 +147,24 @@ function App({ user, onLogout }) {
     depthRef.current = 1;
   }, [user.role]);
 
+  // Clear app icon badge when user brings the app to the foreground
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') navigator.clearAppBadge?.();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const nav = {
     go: (name) => {
-      if (name === "operatorReports" && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
-      if (name === "alerts"          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+      if (name === "operatorReports" && user?.uid) { FBUTIL.markReportsRead(user.uid).catch(() => {}); navigator.clearAppBadge?.(); }
+      if (name === "alerts"          && user?.uid) { FBUTIL.markAlertsRead(user.uid).catch(() => {});  navigator.clearAppBadge?.(); }
       setStack([{ name, props:{} }]);
     },
     push: (name, props={}) => {
-      if (name === "operatorReports" && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
-      if (name === "alerts"          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+      if (name === "operatorReports" && user?.uid) { FBUTIL.markReportsRead(user.uid).catch(() => {}); navigator.clearAppBadge?.(); }
+      if (name === "alerts"          && user?.uid) { FBUTIL.markAlertsRead(user.uid).catch(() => {});  navigator.clearAppBadge?.(); }
       setStack(s => [...s, { name, props }]);
     },
     back: () => setStack(s => s.length > 1 ? s.slice(0,-1) : s),

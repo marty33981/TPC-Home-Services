@@ -11,11 +11,16 @@ self.addEventListener('push', (e) => {
   let payload = {};
   try { payload = e.data.json(); } catch (_) { return; }
 
-  const title = payload.notification?.title || 'New Inspection Report';
-  const body  = payload.notification?.body  || 'An operator submitted a new report.';
+  const title = payload.notification?.title || 'TPC Home Services';
+  const body  = payload.notification?.body  || 'You have a new notification.';
   const count = parseInt(payload.data?.unreadCount || '1', 10);
   const type  = payload.data?.type || 'report';
-  const deep  = type === 'report_assigned' ? '/?screen=operatorReports' : '/?screen=operatorReports';
+
+  const isAlert  = type === 'homeownerAlerts' || type === 'operatorAlerts';
+  const screen   = isAlert ? 'alerts' : 'operatorReports';
+  const tag      = isAlert ? 'tpc-alert' : 'tpc-report';
+  const action   = isAlert ? 'View Alert' : 'View Report';
+  const deep     = `/?screen=${screen}`;
 
   if (self.navigator?.setAppBadge) self.navigator.setAppBadge(count);
 
@@ -25,23 +30,24 @@ self.addEventListener('push', (e) => {
       icon:     ICON,
       badge:    BADGE,
       image:    ICON,
-      data:     { url: deep, count },
-      tag:      'tpc-report',
+      data:     { url: deep, screen },
+      tag,
       renotify: true,
       vibrate:  [200, 100, 200],
-      actions:  [{ action: 'view', title: 'View Report' }],
+      actions:  [{ action: 'view', title: action }],
     })
   );
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const target = e.notification.data?.url || '/';
+  const screen = e.notification.data?.screen || 'operatorReports';
+  const target = e.notification.data?.url    || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       const existing = clients.find(c => c.url.includes(self.location.origin));
       if (existing) {
-        existing.postMessage({ type: 'navigate', screen: 'operatorReports' });
+        existing.postMessage({ type: 'navigate', screen });
         return existing.focus();
       }
       return self.clients.openWindow(target);
