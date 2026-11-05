@@ -99,6 +99,19 @@ function App({ user, onLogout }) {
     }
   }, []);
 
+  // Navigate to reports when notification is tapped while app is open
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data?.type === 'navigate' && e.data.screen) {
+        setStack([{ name: e.data.screen, props: {} }]);
+        if (e.data.screen === 'operatorReports' && user?.uid) FBUTIL.markReportsRead(user.uid).catch(() => {});
+        if (e.data.screen === 'alerts'          && user?.uid) FBUTIL.markAlertsRead(user.uid).catch(() => {});
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMsg);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMsg);
+  }, [user?.uid]);
+
   useEffect(() => {
     refreshAlertCount();
     if (!user?.uid) return;

@@ -5,6 +5,10 @@ const { getMessaging } = require("firebase-admin/messaging");
 
 initializeApp();
 
+const APP_URL  = "https://tpc-homewatch.web.app";
+const ICON_192 = `${APP_URL}/icons/icon-192.png`;
+const ICON_96  = `${APP_URL}/icons/icon-96.png`;
+
 exports.reportCreatedTrigger = onDocumentCreated("reports/{reportId}", async (event) => {
   const report = event.data.data();
   const db = getFirestore();
@@ -34,19 +38,37 @@ exports.reportCreatedTrigger = onDocumentCreated("reports/{reportId}", async (ev
       title: `New Report — ${propName}`,
       body:  `${operatorName} submitted ${visitName}.`,
     },
-    data: { type: "report", propName },
+    data: { type: "report", propName, unreadCount: "1" },
     tokens,
+    android: {
+      notification: {
+        icon:      "ic_stat_notify",
+        color:     "#1B3A8C",
+        sound:     "default",
+        channelId: "tpc_reports",
+        imageUrl:  ICON_192,
+      },
+    },
     webpush: {
       notification: {
-        icon:    "/icons/icon-192.png",
-        badge:   "/icons/icon-96.png",
+        icon:    ICON_192,
+        badge:   ICON_96,
+        image:   ICON_192,
         vibrate: [200, 100, 200],
         requireInteraction: false,
+        actions: [{ action: "view", title: "View Report" }],
       },
-      fcmOptions: { link: "/" },
+      fcmOptions: { link: `${APP_URL}/?screen=operatorReports` },
     },
     apns: {
-      payload: { aps: { sound: "default" } },
+      payload: {
+        aps: {
+          sound: "default",
+          badge: 1,
+          "mutable-content": 1,
+        },
+      },
+      fcmOptions: { imageUrl: ICON_192 },
     },
   });
 
@@ -100,17 +122,37 @@ exports.alertCreatedTrigger = onDocumentCreated("{collection}/{alertId}", async 
 
   await messaging.sendEachForMulticast({
     notification: { title, body },
-    data: { type: col },
+    data: { type: col, unreadCount: "1" },
     tokens,
+    android: {
+      notification: {
+        icon:      "ic_stat_notify",
+        color:     "#1B3A8C",
+        sound:     "default",
+        channelId: "tpc_alerts",
+        imageUrl:  ICON_192,
+      },
+    },
     webpush: {
       notification: {
-        icon:    "/icons/icon-192.png",
-        badge:   "/icons/icon-96.png",
+        icon:    ICON_192,
+        badge:   ICON_96,
+        image:   ICON_192,
         vibrate: [200, 100, 200],
+        actions: [{ action: "view", title: "View Alert" }],
       },
-      fcmOptions: { link: "/" },
+      fcmOptions: { link: `${APP_URL}/?screen=alerts` },
     },
-    apns: { payload: { aps: { sound: "default" } } },
+    apns: {
+      payload: {
+        aps: {
+          sound: "default",
+          badge: 1,
+          "mutable-content": 1,
+        },
+      },
+      fcmOptions: { imageUrl: ICON_192 },
+    },
   });
 
   return null;
@@ -151,13 +193,37 @@ exports.reportAssignedTrigger = onDocumentUpdated("reports/{reportId}", async (e
       title: `Report assigned — ${propName}`,
       body:  `${operatorName} sent you the ${visitName} report.`,
     },
-    data: { type: "report_assigned", propName },
+    data: { type: "report_assigned", propName, unreadCount: "1" },
     tokens,
-    webpush: {
-      notification: { icon: "/icons/icon-192.png", badge: "/icons/icon-96.png" },
-      fcmOptions: { link: "/" },
+    android: {
+      notification: {
+        icon:      "ic_stat_notify",
+        color:     "#1B3A8C",
+        sound:     "default",
+        channelId: "tpc_reports",
+        imageUrl:  ICON_192,
+      },
     },
-    apns: { payload: { aps: { sound: "default" } } },
+    webpush: {
+      notification: {
+        icon:    ICON_192,
+        badge:   ICON_96,
+        image:   ICON_192,
+        vibrate: [200, 100, 200],
+        actions: [{ action: "view", title: "View Report" }],
+      },
+      fcmOptions: { link: `${APP_URL}/?screen=operatorReports` },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: "default",
+          badge: 1,
+          "mutable-content": 1,
+        },
+      },
+      fcmOptions: { imageUrl: ICON_192 },
+    },
   });
 
   return null;

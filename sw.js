@@ -2,6 +2,10 @@
 // Push notifications and smart caching.
 // App code (project/) is always fetched fresh — only vendor/assets are cached.
 
+const ORIGIN = self.location.origin;
+const ICON   = ORIGIN + '/icons/icon-192.png';
+const BADGE  = ORIGIN + '/icons/icon-96.png';
+
 self.addEventListener('push', (e) => {
   if (!e.data) return;
   let payload = {};
@@ -10,29 +14,37 @@ self.addEventListener('push', (e) => {
   const title = payload.notification?.title || 'New Inspection Report';
   const body  = payload.notification?.body  || 'An operator submitted a new report.';
   const count = parseInt(payload.data?.unreadCount || '1', 10);
+  const type  = payload.data?.type || 'report';
+  const deep  = type === 'report_assigned' ? '/?screen=operatorReports' : '/?screen=operatorReports';
 
   if (self.navigator?.setAppBadge) self.navigator.setAppBadge(count);
 
   e.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon:     '/icons/icon-192.png',
-      badge:    '/icons/icon-96.png',
-      data:     { url: '/', count },
+      icon:     ICON,
+      badge:    BADGE,
+      image:    ICON,
+      data:     { url: deep, count },
       tag:      'tpc-report',
       renotify: true,
       vibrate:  [200, 100, 200],
+      actions:  [{ action: 'view', title: 'View Report' }],
     })
   );
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const target = e.notification.data?.url || '/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       const existing = clients.find(c => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
-      return self.clients.openWindow(e.notification.data?.url || '/');
+      if (existing) {
+        existing.postMessage({ type: 'navigate', screen: 'operatorReports' });
+        return existing.focus();
+      }
+      return self.clients.openWindow(target);
     })
   );
 });
