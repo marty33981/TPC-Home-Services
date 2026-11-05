@@ -638,7 +638,7 @@ function PropertyDetail({ id, nav, user }) {
           </div>
         ) : (() => {
           const g = photoGroups[0];
-          const fmtDate = (ts) => { try { const d = ts?.toDate ? ts.toDate() : new Date(ts); if (!ts || d.getFullYear() < 2000) return "Unknown date"; return d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric", year:"numeric" }); } catch { return ""; } };
+          const fmtDate = (ts) => { if (!ts) return ""; try { const d = ts.toDate ? ts.toDate() : new Date(ts); if (d.getFullYear() < 2000) return ""; return d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric", year:"numeric" }); } catch { return ""; } };
           return (
             <button onClick={() => nav.push("photoGallery", { id: id, name: p.name, openGroupId: g.reportId })}
               style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px",
@@ -1083,10 +1083,10 @@ function PhotoGallery({ id, name, nav, openGroupId }) {
 
   const totalGroups = (groups || []).length;
 
-  const fmtDate = (iso) => {
-    if (!iso) return "Unknown date";
-    try { return new Date(iso).toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
-    catch { return iso; }
+  const fmtDate = (ts) => {
+    if (!ts) return "Unknown date";
+    try { const d = ts.toDate ? ts.toDate() : new Date(ts); if (d.getFullYear() < 2000) return "Unknown date"; return d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric", year:"numeric" }); }
+    catch { return "Unknown date"; }
   };
 
   const toggleGroup = (reportId) => setOpen(prev => {
