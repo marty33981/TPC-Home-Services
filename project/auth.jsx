@@ -1479,12 +1479,19 @@ function OperatorReports({ nav, canGoBack, user }) {
 }
 
 function ReportPhotoGrid({ urls }) {
+  const [resolved, setResolved] = React.useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
+
+  useEffect(() => {
+    FBUTIL.resolvePhotoUrls(urls).then(setResolved);
+  }, [urls]);
+
+  const display = resolved || urls;
   return (
     <div>
-      <div className="eyebrow" style={{ marginBottom:7 }}>Photos ({urls.length})</div>
+      <div className="eyebrow" style={{ marginBottom:7 }}>Photos ({display.length})</div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-        {urls.map((url, i) => (
+        {display.map((url, i) => (
           <div key={i} onClick={() => setLightboxUrl(url)} style={{ aspectRatio:"1", borderRadius:12, overflow:"hidden", cursor:"zoom-in" }}>
             <img src={url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
           </div>

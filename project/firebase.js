@@ -137,25 +137,34 @@ window.FBUTIL = {
 
   // ── Property photo gallery (sourced from inspection reports) ─
 
+  async resolvePhotoUrls(urls) {
+    return Promise.all((urls || []).map(async url => {
+      if (typeof url === 'string' && url.startsWith('gs://')) {
+        try { return await fbStorage.refFromURL(url).getDownloadURL(); } catch { return null; }
+      }
+      return url;
+    })).then(arr => arr.filter(Boolean));
+  },
+
   async getPropertyPhotos(propId) {
     const snap = await db.collection('reports')
       .where('propId', '==', propId).get();
     const MIN_MS = new Date('2020-01-01').getTime();
-    const groups = snap.docs
+    const raw = snap.docs
       .map(d => ({ _id: d.id, ...d.data() }))
       .filter(r => {
         const ms = r.createdAt?.toMillis?.() ?? 0;
         return r.photoUrls?.length > 0 && ms > MIN_MS;
       })
-      .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
-      .map(r => ({
-        reportId:    r._id,
-        visitName:   r.visitName   || "Inspection",
-        submittedBy: r.submittedBy || "Operator",
-        submittedAt: r.submittedAt || r.createdAt || null,
-        urls:        r.photoUrls,
-      }));
-    return groups;
+      .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+    const groups = await Promise.all(raw.map(async r => ({
+      reportId:    r._id,
+      visitName:   r.visitName   || "Inspection",
+      submittedBy: r.submittedBy || "Operator",
+      submittedAt: r.submittedAt || r.createdAt || null,
+      urls:        await FBUTIL.resolvePhotoUrls(r.photoUrls),
+    })));
+    return groups.filter(g => g.urls.length > 0);
   },
 
   // ── Invitations (pending accounts, no Firebase Auth yet) ────
