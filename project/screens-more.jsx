@@ -1116,7 +1116,10 @@ function More({ nav, user, onLogout, canGoBack, onSwitchView, previewRole }) {
 
   React.useEffect(() => {
     if (isOperator) AUTH.getAdminMessages().then(msgs => setMsgCount(msgs.length));
-  }, [isOperator]);
+    // Clear any stuck report badge when More screen opens
+    const uid = u?.uid;
+    if (uid && (isAdmin || isSupervisor)) FBUTIL.markReportsRead(uid).catch(() => {});
+  }, []);
 
   const toggleReceiveReports = async () => {
     const newVal = !receiveReports;

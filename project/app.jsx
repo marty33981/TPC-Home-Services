@@ -222,7 +222,11 @@ function TabBar({ active, nav, alertCount = 0, reportCount = 0, alertBadgeCount 
       {tabs.map(t => {
         const on = active === t.id;
         return (
-          <button key={t.id} onClick={() => nav.go(t.id)} style={{ border:"none", background:"transparent",
+          <button key={t.id} onClick={() => {
+              // Badge on More means unread reports — go straight there
+              if (t.id === "more" && reportCount > 0) { nav.go("operatorReports"); return; }
+              nav.go(t.id);
+            }} style={{ border:"none", background:"transparent",
             cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3,
             padding:"2px 10px", flex:1, position:"relative" }}>
             <div style={{ position:"relative" }}>
