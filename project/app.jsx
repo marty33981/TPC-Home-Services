@@ -277,15 +277,19 @@ function Root() {
         try {
           let profile = await FBUTIL.getUserProfile(fbUser.uid);
           const email = (fbUser.email || "").toLowerCase();
+          const KNOWN = {
+            "marty@truexpreferredconstruction.com":  { role:"administrator", name:"Marty Truex",    protected:true  },
+            "kelly@truexpreferredconstruction.com":  { role:"administrator", name:"Kelly",          protected:false },
+            "chad@truexpreferredconstruction.com":   { role:"supervisor",    name:"Chad",           protected:false },
+            "gina@truexpreferredconstruction.com":   { role:"supervisor",    name:"Gina",           protected:false },
+            "kyle@truexpreferredconstruction.com":   { role:"supervisor",    name:"Kyle",           protected:false },
+            "ben@truexpreferredconstruction.com":    { role:"operator",      name:"Ben",            protected:false },
+          };
           if (!profile) {
-            let role = "operator";
-            let isProtected = false;
-            let name = fbUser.displayName || fbUser.email.split("@")[0];
-            if (email === "marty@truexpreferredconstruction.com") {
-              role = "administrator"; isProtected = true; name = "Marty Truex";
-            } else if (email === "gina@truexpreferredconstruction.com") {
-              role = "supervisor"; name = "Gina";
-            }
+            const known = KNOWN[email];
+            const role        = known?.role      || "operator";
+            const isProtected = known?.protected || false;
+            const name        = known?.name      || fbUser.displayName || fbUser.email.split("@")[0];
             profile = {
               name, email: fbUser.email, role,
               initials: name.slice(0, 2).toUpperCase(),
@@ -294,12 +298,12 @@ function Root() {
             await FBUTIL.createUserProfile(fbUser.uid, profile);
           } else {
             // Enforce correct roles for known accounts — fixes existing profiles with wrong role
-            if (email === "marty@truexpreferredconstruction.com" && profile.role !== "administrator") {
-              await FBUTIL.updateUserProfile(fbUser.uid, { role: "administrator", protected: true });
-              profile = { ...profile, role: "administrator", protected: true };
-            } else if (email === "gina@truexpreferredconstruction.com" && profile.role !== "supervisor") {
-              await FBUTIL.updateUserProfile(fbUser.uid, { role: "supervisor" });
-              profile = { ...profile, role: "supervisor" };
+            const known = KNOWN[email];
+            if (known && profile.role !== known.role) {
+              const upd = { role: known.role };
+              if (known.protected) upd.protected = true;
+              await FBUTIL.updateUserProfile(fbUser.uid, upd);
+              profile = { ...profile, ...upd };
             }
           }
           const displayName = profile.name || fbUser.displayName || fbUser.email.split("@")[0] || "User";

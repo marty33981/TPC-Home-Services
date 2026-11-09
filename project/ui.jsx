@@ -58,7 +58,7 @@ function Avatar({ size = 34 }) {
   return (
     <div style={{ width:size, height:size, borderRadius:999, background:"var(--pine)", color:"var(--on-pine)",
       display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:size*0.4,
-      letterSpacing:0.3, boxShadow:"var(--shadow-sm)" }}>{HW.brand.initials}</div>
+      letterSpacing:0.3, boxShadow:"var(--shadow-sm)" }}>{AUTH.currentUser?.initials || AUTH.currentUser?.name?.slice(0,2).toUpperCase() || "?"}</div>
   );
 }
 
