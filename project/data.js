@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 window.HW = {
   version: { number: "2.4.61", build: "20261105", date: "November 5, 2026" },
-  brand: { name: "TPC Home Services", short: "TPC", operator: "Marty Truex", initials: "MM",
+  brand: { name: "TPC Home Services", short: "TPC", operator: "Marty Montgomery", initials: "MM",
            region: "Boca Grande, Charlotte & Sarasota Counties" },
 
   stats: {
